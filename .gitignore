@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# 虚拟环境
+venv/
+.venv/
+env/
+
+# 数据库 & 用户数据（本地产生，不入库）
+chroma_db/
+uploads/
+kb.db
+markdown/
+
+# 模型文件（太大，不入库）
+models/
+
+# 环境变量 & 密钥
+.env
+.env.*
+*.key
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
