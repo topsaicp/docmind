@@ -14,7 +14,8 @@ DEEPSEEK_API_KEY  = os.getenv("DEEPSEEK_API_KEY", "")
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 
 # Embedding 模型：英文为主混合场景用 BGE-M3
-EMBED_MODEL = "/root/models/bce-embedding"   # 本地路径，无需联网
+EMBED_MODEL = os.getenv("EMBED_MODEL", "/root/models/bce-embedding")
+# 本地部署用本地路径；云端部署设环境变量 EMBED_MODEL=maidalun1020/bce-embedding-base_v1
 
 # Chroma collection 名称
 COLLECTION_NAME = "kb_collection"
