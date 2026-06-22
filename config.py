@@ -14,7 +14,7 @@ DEEPSEEK_API_KEY  = os.getenv("DEEPSEEK_API_KEY", "")
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 
 # Embedding 模型：英文为主混合场景用 BGE-M3
-EMBED_MODEL = os.getenv("EMBED_MODEL", "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+JINA_API_KEY = os.getenv("JINA_API_KEY", "")
 
 # Chroma collection 名称
 COLLECTION_NAME = "kb_collection"

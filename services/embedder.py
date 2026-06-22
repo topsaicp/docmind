@@ -1,23 +1,24 @@
 """
-向量化服务：BCEmbedding + Chroma
-支持入库、删除、按文档/章节检索
+向量化服务：Jina AI Embedding API + Chroma
+无需本地模型，零内存占用
 """
+import requests
 import chromadb
-from sentence_transformers import SentenceTransformer
 from tqdm import tqdm
-from config import CHROMA_DIR, COLLECTION_NAME, EMBED_MODEL
+from config import CHROMA_DIR, COLLECTION_NAME, JINA_API_KEY
 
-_model      = None
 _collection = None
 
-
-def _get_model() -> SentenceTransformer:
-    global _model
-    if _model is None:
-        print(f"正在加载 Embedding 模型 {EMBED_MODEL}（首次约需1-2分钟下载）...")
-        _model = SentenceTransformer(EMBED_MODEL)
-        print("✅ 模型加载完成")
-    return _model
+def embed_texts(texts: list[str], is_query: bool = False) -> list[list[float]]:
+    task = "retrieval.query" if is_query else "retrieval.passage"
+    resp = requests.post(
+        "https://api.jina.ai/v1/embeddings",
+        headers={"Authorization": f"Bearer {JINA_API_KEY}", "Content-Type": "application/json"},
+        json={"model": "jina-embeddings-v3", "input": texts, "task": task, "dimensions": 768},
+        timeout=30,
+    )
+    resp.raise_for_status()
+    return [item["embedding"] for item in resp.json()["data"]]
 
 
 def _get_collection() -> chromadb.Collection:
@@ -31,20 +32,9 @@ def _get_collection() -> chromadb.Collection:
     return _collection
 
 
-def embed_texts(texts: list[str], is_query: bool = False) -> list[list[float]]:
-    model = _get_model()
-    vecs  = model.encode(
-        texts,
-        normalize_embeddings = True,
-        batch_size           = 32,
-        show_progress_bar    = False,
-    )
-    return vecs.tolist()
-
-
-def add_chunks(chunks: list[dict], batch_size: int = 64) -> int:
+def add_chunks(chunks: list[dict], batch_size: int = 32) -> int:
     collection = _get_collection()
-    added      = 0
+    added = 0
     for i in tqdm(range(0, len(chunks), batch_size), desc="向量化入库"):
         batch      = chunks[i:i + batch_size]
         texts      = [c["text"] for c in batch]
@@ -53,16 +43,13 @@ def add_chunks(chunks: list[dict], batch_size: int = 64) -> int:
             ids        = [c["id"] for c in batch],
             documents  = texts,
             embeddings = embeddings,
-            metadatas  = [
-                {
-                    "doc_id":   c["doc_id"],
-                    "filename": c["filename"],
-                    "chunk_id": c["chunk_id"],
-                    "lang":     c.get("lang", "en"),
-                    "section":  c.get("section", ""),
-                }
-                for c in batch
-            ],
+            metadatas  = [{
+                "doc_id":   c["doc_id"],
+                "filename": c["filename"],
+                "chunk_id": c["chunk_id"],
+                "lang":     c.get("lang", "en"),
+                "section":  c.get("section", ""),
+            } for c in batch],
         )
         added += len(batch)
     return added
@@ -82,75 +69,47 @@ def collection_count() -> int:
 
 
 def get_doc_sections(doc_id: str) -> list[str]:
-    """返回某篇文档包含的章节名列表（有序去重）"""
     collection = _get_collection()
-    results    = collection.get(
-        where   = {"doc_id": doc_id},
-        include = ["metadatas"],
-    )
-    seen    = set()
-    ordered = []
+    results    = collection.get(where={"doc_id": doc_id}, include=["metadatas"])
+    seen, ordered = set(), []
     for m in results["metadatas"]:
         sec = m.get("section", "").strip()
         if sec and sec not in seen:
-            seen.add(sec)
-            ordered.append(sec)
+            seen.add(sec); ordered.append(sec)
     return ordered
 
 
-def search(
-    query:   str,
-    top_k:   int = 8,
-    doc_ids: list[str] | None = None,
-    section: str | None = None,
-) -> list[dict]:
-    """
-    语义检索。
-    doc_ids 非空 → 只在指定文档内搜索
-    section 非空  → 只在该章节内搜索
-    """
+def search(query: str, top_k: int = 8, doc_ids: list[str] | None = None,
+           section: str | None = None) -> list[dict]:
     collection = _get_collection()
     query_vec  = embed_texts([query], is_query=True)
 
-    # 构建 where 过滤条件
     conditions = []
     if doc_ids:
-        if len(doc_ids) == 1:
-            conditions.append({"doc_id": {"$eq": doc_ids[0]}})
-        else:
-            conditions.append({"doc_id": {"$in": doc_ids}})
+        conditions.append({"doc_id": {"$eq": doc_ids[0]}} if len(doc_ids) == 1
+                          else {"doc_id": {"$in": doc_ids}})
     if section:
         conditions.append({"section": {"$eq": section}})
 
-    if len(conditions) == 0:
-        where = None
-    elif len(conditions) == 1:
-        where = conditions[0]
-    else:
-        where = {"$and": conditions}
+    where = None if not conditions else (
+        conditions[0] if len(conditions) == 1 else {"$and": conditions}
+    )
 
     total = collection.count()
     if total == 0:
         return []
 
-    kwargs = dict(
-        query_embeddings = query_vec,
-        n_results        = min(top_k, total),
-        include          = ["documents", "metadatas", "distances"],
-    )
+    kwargs = dict(query_embeddings=query_vec, n_results=min(top_k, total),
+                  include=["documents", "metadatas", "distances"])
     if where:
         kwargs["where"] = where
 
     results = collection.query(**kwargs)
-
-    hits = []
-    for i in range(len(results["documents"][0])):
-        hits.append({
-            "text":     results["documents"][0][i],
-            "filename": results["metadatas"][0][i]["filename"],
-            "doc_id":   results["metadatas"][0][i]["doc_id"],
-            "chunk_id": results["metadatas"][0][i]["chunk_id"],
-            "section":  results["metadatas"][0][i].get("section", ""),
-            "score":    round(1 - results["distances"][0][i], 4),
-        })
-    return hits
+    return [{
+        "text":     results["documents"][0][i],
+        "filename": results["metadatas"][0][i]["filename"],
+        "doc_id":   results["metadatas"][0][i]["doc_id"],
+        "chunk_id": results["metadatas"][0][i]["chunk_id"],
+        "section":  results["metadatas"][0][i].get("section", ""),
+        "score":    round(1 - results["distances"][0][i], 4),
+    } for i in range(len(results["documents"][0]))]
