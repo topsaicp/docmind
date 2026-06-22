@@ -44,12 +44,16 @@ def ask_stream(req: AskRequest):
     section = req.section or None
 
     def event_generator():
-        gen = ask(req.question, stream=True, doc_ids=doc_ids, section=section)
-        for chunk in gen:
-            if isinstance(chunk, dict):
-                yield f"data: {json.dumps({'type':'sources','sources':chunk['sources']}, ensure_ascii=False)}\n\n"
-            else:
-                yield f"data: {json.dumps({'type':'text','text':chunk}, ensure_ascii=False)}\n\n"
+        try:
+            gen = ask(req.question, stream=True, doc_ids=doc_ids, section=section)
+            for chunk in gen:
+                if isinstance(chunk, dict):
+                    yield f"data: {json.dumps({'type':'sources','sources':chunk['sources']}, ensure_ascii=False)}\n\n"
+                else:
+                    yield f"data: {json.dumps({'type':'text','text':chunk}, ensure_ascii=False)}\n\n"
+        except Exception as e:
+            err = f"❌ 服务器错误：{str(e)}"
+            yield f"data: {json.dumps({'type':'text','text':err}, ensure_ascii=False)}\n\n"
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
