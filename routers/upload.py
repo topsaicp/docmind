@@ -5,15 +5,16 @@ GET  /documents    → 列出所有文档
 DELETE /documents/{doc_id} → 删除文档
 GET  /documents/{doc_id}/status → 查询处理状态
 """
-import uuid, shutil, threading
+import uuid, threading
 from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
 from sqlalchemy.orm import Session
 
-from config import UPLOAD_DIR, MAX_FILE_SIZE_MB, ALLOWED_EXT
-from db.database import get_session, Document
+from config import UPLOAD_DIR, MAX_FILE_SIZE_MB, ALLOWED_EXT, FREE_PDF_LIMIT
+from db.database import get_session, Document, User
 from services.pdf_processor import process_pdf
 from services.embedder import add_chunks, delete_doc
+from routers.auth import get_current_user
 
 router = APIRouter(prefix="/api", tags=["documents"])
 
@@ -54,7 +55,14 @@ def _process_in_background(doc_id: str, pdf_path: str, filename: str):
 async def upload_pdf(
     file: UploadFile = File(...),
     session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
 ):
+    # 免费用户 PDF 数量限制
+    if current_user.plan == "free":
+        db_user = session.query(User).filter_by(id=current_user.id).first()
+        if db_user.pdf_count >= FREE_PDF_LIMIT:
+            raise HTTPException(403, f"免费用户最多上传 {FREE_PDF_LIMIT} 篇 PDF，请升级专业版")
+
     # 格式校验
     suffix = Path(file.filename).suffix.lower()
     if suffix not in ALLOWED_EXT:
@@ -74,12 +82,17 @@ async def upload_pdf(
     # 写入数据库
     doc = Document(
         id            = doc_id,
+        user_id       = current_user.id,
         filename      = filename,
         original_name = file.filename,
         size_bytes    = len(content),
         status        = "pending",
     )
     session.add(doc)
+
+    # 更新用户 PDF 计数
+    db_user = session.query(User).filter_by(id=current_user.id).first()
+    db_user.pdf_count += 1
     session.commit()
 
     # 后台处理
@@ -99,8 +112,9 @@ async def upload_pdf(
 
 
 @router.get("/documents")
-def list_documents(session: Session = Depends(get_session)):
-    docs = session.query(Document).order_by(Document.created_at.desc()).all()
+def list_documents(session: Session = Depends(get_session),
+                   current_user: User = Depends(get_current_user)):
+    docs = session.query(Document).filter_by(user_id=current_user.id).order_by(Document.created_at.desc()).all()
     return [
         {
             "doc_id":        d.id,
@@ -117,8 +131,9 @@ def list_documents(session: Session = Depends(get_session)):
 
 
 @router.get("/documents/{doc_id}/status")
-def get_status(doc_id: str, session: Session = Depends(get_session)):
-    doc = session.query(Document).filter_by(id=doc_id).first()
+def get_status(doc_id: str, session: Session = Depends(get_session),
+               current_user: User = Depends(get_current_user)):
+    doc = session.query(Document).filter_by(id=doc_id, user_id=current_user.id).first()
     if not doc:
         raise HTTPException(404, "文档不存在")
     return {
@@ -130,8 +145,9 @@ def get_status(doc_id: str, session: Session = Depends(get_session)):
 
 
 @router.delete("/documents/{doc_id}")
-def delete_document(doc_id: str, session: Session = Depends(get_session)):
-    doc = session.query(Document).filter_by(id=doc_id).first()
+def delete_document(doc_id: str, session: Session = Depends(get_session),
+                    current_user: User = Depends(get_current_user)):
+    doc = session.query(Document).filter_by(id=doc_id, user_id=current_user.id).first()
     if not doc:
         raise HTTPException(404, "文档不存在")
 
@@ -142,6 +158,11 @@ def delete_document(doc_id: str, session: Session = Depends(get_session)):
     pdf_path = UPLOAD_DIR / doc.filename
     if pdf_path.exists():
         pdf_path.unlink()
+
+    # 更新用户 PDF 计数
+    db_user = session.query(User).filter_by(id=current_user.id).first()
+    if db_user and db_user.pdf_count > 0:
+        db_user.pdf_count -= 1
 
     # 删除数据库记录
     session.delete(doc)

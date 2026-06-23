@@ -4,8 +4,10 @@ from fastapi.responses import FileResponse
 from pathlib import Path
 
 from db.database import init_db
-from routers.upload import router as upload_router
-from routers.query  import router as query_router
+from routers.upload   import router as upload_router
+from routers.query    import router as query_router
+from routers.auth     import router as auth_router
+from routers.payment  import router as payment_router
 
 app = FastAPI(title="PDF 知识库问答系统", version="1.0.0")
 
@@ -13,6 +15,8 @@ app = FastAPI(title="PDF 知识库问答系统", version="1.0.0")
 init_db()
 
 # 注册路由
+app.include_router(auth_router)
+app.include_router(payment_router)
 app.include_router(upload_router)
 app.include_router(query_router)
 

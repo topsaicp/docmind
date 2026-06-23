@@ -28,6 +28,15 @@ CHUNK_OVERLAP  = 30    # overlap（词/字符，取小值）
 TOP_K        = 8       # 初次检索数量
 RERANK_TOP_K = 5       # Rerank 后保留数量
 
+# 用户认证
+SECRET_KEY   = os.getenv("SECRET_KEY", "docmind-dev-secret-change-in-prod")
+ADMIN_SECRET = os.getenv("ADMIN_SECRET", "admin123")
+JWT_EXPIRE_DAYS = 30
+
+# 免费套餐限额
+FREE_PDF_LIMIT         = 5
+FREE_QUERY_DAILY_LIMIT = 20
+
 # 文件限制
 MAX_FILE_SIZE_MB = 50
 ALLOWED_EXT      = {".pdf"}

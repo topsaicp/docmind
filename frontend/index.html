@@ -332,6 +332,26 @@ input, textarea { font-family: inherit; }
 .pay-close { position: absolute; top: 14px; right: 16px; background: none; border: none;
              cursor: pointer; color: var(--muted); font-size: 1.2rem; }
 
+/* Auth modal */
+#auth-modal { display: none; position: fixed; inset: 0; z-index: 500;
+              background: rgba(0,0,0,.75); backdrop-filter: blur(6px);
+              align-items: center; justify-content: center; }
+#auth-modal.show { display: flex; }
+.auth-box { background: var(--card); border: 1px solid var(--border-gold); border-radius: 12px;
+            padding: 36px; max-width: 400px; width: 90%; position: relative; }
+.auth-input { width: 100%; background: rgba(255,255,255,.05); border: 1px solid var(--border);
+              border-radius: 8px; padding: 11px 14px; font-size: .9rem; color: var(--fg);
+              outline: none; transition: border-color .2s; box-sizing: border-box; }
+.auth-input:focus { border-color: rgba(201,168,76,.45); }
+.auth-input::placeholder { color: var(--muted); }
+.auth-tab { flex: 1; background: transparent; border: none; padding: 9px 0; font-size: .88rem;
+            color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all .2s; }
+.auth-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+/* Usage bar */
+.usage-bar { background: rgba(201,168,76,.04); border: 1px solid rgba(201,168,76,.15);
+             border-radius: 8px; padding: 10px 16px; margin-bottom: 14px;
+             display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+
 /* Responsive */
 @media (max-width: 900px) {
   .nav-links { display: none; }
@@ -360,9 +380,9 @@ input, textarea { font-family: inherit; }
       <a href="#faq">常见问题</a>
       <a href="#app">开始使用</a>
     </div>
-    <div class="nav-ctas">
-      <button class="btn-ghost-nav">登录</button>
-      <a href="#app" class="btn-gold">免费开始</a>
+    <div class="nav-ctas" id="navCtas">
+      <button class="btn-ghost-nav" onclick="openAuth('login')">登录</button>
+      <button class="btn-gold" onclick="openAuth('register')">免费注册</button>
     </div>
   </div>
 </nav>
@@ -592,6 +612,32 @@ input, textarea { font-family: inherit; }
   </div>
 </div>
 
+<!-- ═══ AUTH MODAL ════════════════════════════════════════════ -->
+<div id="auth-modal">
+  <div class="auth-box">
+    <button onclick="closeAuth()" style="position:absolute;top:14px;right:16px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:1.2rem">✕</button>
+    <div style="text-align:center;margin-bottom:22px">
+      <div style="font-size:1.6rem;margin-bottom:6px">📚</div>
+      <div style="font-family:'Playfair Display',serif;font-size:1.15rem;color:var(--fg);font-weight:700">DocMind</div>
+      <div style="font-size:.78rem;color:var(--muted);margin-top:4px">上传 PDF，构建私人知识库</div>
+    </div>
+    <div style="display:flex;border-bottom:1px solid var(--border);margin-bottom:22px">
+      <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">登录</button>
+      <button class="auth-tab" id="tab-register" onclick="switchTab('register')">注册</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:11px">
+      <input class="auth-input" type="email" id="auth-email" placeholder="邮箱地址" autocomplete="email">
+      <input class="auth-input" type="password" id="auth-password" placeholder="密码（至少6位）" autocomplete="current-password">
+      <div id="auth-error" style="display:none;color:#f87171;font-size:.8rem;padding:8px 12px;background:rgba(248,113,113,.08);border-radius:6px"></div>
+      <button id="auth-submit" onclick="submitAuth()" class="btn-plan-primary" style="padding:12px;border-radius:7px;font-size:.9rem;border:none;cursor:pointer">登录</button>
+    </div>
+    <p style="text-align:center;font-size:.78rem;color:var(--muted);margin-top:14px">
+      <span id="auth-switch-hint">没有账号？</span>
+      <a id="auth-switch-link" style="color:var(--gold);cursor:pointer" onclick="switchTab('register')">免费注册</a>
+    </p>
+  </div>
+</div>
+
 <!-- ═══ FAQ ═══════════════════════════════════════════════════ -->
 <section id="faq">
   <div class="wrap-sm">
@@ -631,6 +677,18 @@ input, textarea { font-family: inherit; }
     <h2 class="section-title" style="font-size:clamp(1.6rem,4vw,2.4rem)">上传你的第一篇文献</h2>
     <p style="color:var(--muted);font-size:.88rem;margin-top:12px">上传后约 30–90 秒完成处理，即可开始提问</p>
   </div>
+  <!-- 未登录提示 -->
+  <div id="authGate" style="display:none;text-align:center;padding:60px 24px">
+    <div style="font-size:2.5rem;margin-bottom:16px">🔒</div>
+    <h3 style="font-family:'Playfair Display',serif;font-size:1.4rem;margin-bottom:10px">登录后即可使用</h3>
+    <p style="color:var(--muted);font-size:.88rem;margin-bottom:24px">注册免费账号，立即开始上传 PDF 并智能问答</p>
+    <button onclick="openAuth('register')" class="btn-plan-primary" style="padding:12px 32px;border-radius:7px;font-size:.92rem;border:none;cursor:pointer">免费注册</button>
+    <span style="color:var(--muted);margin:0 12px;font-size:.85rem">或</span>
+    <button onclick="openAuth('login')" style="background:transparent;border:1px solid var(--border);color:var(--fg);padding:11px 24px;border-radius:7px;font-size:.88rem;cursor:pointer">已有账号，登录</button>
+  </div>
+
+  <div id="appContent" style="display:none">
+  <div class="usage-bar" id="usageBar"></div>
   <div class="app-wrap">
     <!-- 上传 -->
     <div class="ak-card">
@@ -667,6 +725,7 @@ input, textarea { font-family: inherit; }
       <div id="chatBottom"></div>
     </div>
   </div>
+  </div><!-- /appContent -->
 </section>
 
 <!-- ═══ FOOTER ════════════════════════════════════════════════ -->
@@ -732,6 +791,108 @@ let selectedDocs  = new Set();
 let allDocs       = [];
 let isAsking      = false;
 let activeSection = '';
+let currentUser   = null;
+let authMode      = 'login';
+
+// ── Auth helpers ──────────────────────────────────────────────
+function getAuthHeaders() {
+  const tok = localStorage.getItem('auth_token');
+  return tok ? { 'Authorization': `Bearer ${tok}` } : {};
+}
+async function authFetch(url, options = {}) {
+  const headers = { ...(options.headers || {}), ...getAuthHeaders() };
+  const res = await fetch(url, { ...options, headers });
+  if (res.status === 401) {
+    localStorage.removeItem('auth_token');
+    currentUser = null;
+    updateNavbar();
+    showAuthGate();
+    throw new Error('请先登录');
+  }
+  return res;
+}
+
+// ── Auth modal ────────────────────────────────────────────────
+function openAuth(mode = 'login') { authMode = mode; switchTab(mode); document.getElementById('auth-modal').classList.add('show'); setTimeout(()=>document.getElementById('auth-email').focus(),80); }
+function closeAuth() { document.getElementById('auth-modal').classList.remove('show'); document.getElementById('auth-error').style.display='none'; }
+function switchTab(mode) {
+  authMode = mode;
+  document.getElementById('tab-login').classList.toggle('active', mode==='login');
+  document.getElementById('tab-register').classList.toggle('active', mode==='register');
+  document.getElementById('auth-submit').textContent = mode==='login'?'登录':'注册';
+  document.getElementById('auth-switch-hint').textContent = mode==='login'?'没有账号？':'已有账号？';
+  document.getElementById('auth-switch-link').textContent = mode==='login'?'免费注册':'立即登录';
+  document.getElementById('auth-switch-link').onclick = () => switchTab(mode==='login'?'register':'login');
+  document.getElementById('auth-error').style.display='none';
+}
+async function submitAuth() {
+  const email = document.getElementById('auth-email').value.trim();
+  const pwd   = document.getElementById('auth-password').value;
+  const btn   = document.getElementById('auth-submit');
+  if (!email.includes('@')) { showAuthErr('请输入有效邮箱'); return; }
+  if (pwd.length < 6)       { showAuthErr('密码至少6位'); return; }
+  btn.disabled=true; btn.textContent='请稍候…';
+  try {
+    const url = authMode==='login' ? `${API}/api/auth/login` : `${API}/api/auth/register`;
+    const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,password:pwd}) });
+    const d   = await res.json();
+    if (!res.ok) { showAuthErr(d.detail||'操作失败'); return; }
+    localStorage.setItem('auth_token', d.token);
+    currentUser = { email:d.email, plan:d.plan, pdf_count:d.pdf_count||0, query_count_today:d.query_count_today||0 };
+    closeAuth(); updateNavbar(); showApp();
+  } catch(e) { showAuthErr('网络错误：'+e.message); }
+  finally { btn.disabled=false; btn.textContent=authMode==='login'?'登录':'注册'; }
+}
+function showAuthErr(msg) { const e=document.getElementById('auth-error'); e.textContent=msg; e.style.display='block'; }
+function logout() { localStorage.removeItem('auth_token'); currentUser=null; updateNavbar(); showAuthGate(); }
+document.getElementById('auth-modal').addEventListener('click', e=>{ if(e.target===document.getElementById('auth-modal')) closeAuth(); });
+document.getElementById('auth-password').addEventListener('keydown', e=>{ if(e.key==='Enter') submitAuth(); });
+
+// ── App 区域显示逻辑 ──────────────────────────────────────────
+function showAuthGate() { document.getElementById('authGate').style.display='block'; document.getElementById('appContent').style.display='none'; }
+function showApp() { document.getElementById('authGate').style.display='none'; document.getElementById('appContent').style.display='block'; loadDocuments(); loadStats(); updateUsageBar(); }
+
+// ── Navbar ────────────────────────────────────────────────────
+function updateNavbar() {
+  const el = document.getElementById('navCtas');
+  if (currentUser) {
+    const pro = currentUser.plan==='pro' ? `<span style="background:var(--gold);color:var(--bg);font-size:.62rem;padding:2px 6px;border-radius:3px;font-weight:700;margin-left:5px">PRO</span>` : '';
+    el.innerHTML = `<span style="font-size:.82rem;color:var(--muted)">${currentUser.email.split('@')[0]}${pro}</span><button class="btn-ghost-nav" onclick="logout()">退出</button>`;
+  } else {
+    el.innerHTML = `<button class="btn-ghost-nav" onclick="openAuth('login')">登录</button><button class="btn-gold" onclick="openAuth('register')">免费注册</button>`;
+  }
+}
+
+// ── 用量栏 ────────────────────────────────────────────────────
+function updateUsageBar() {
+  if (!currentUser) return;
+  const bar = document.getElementById('usageBar');
+  if (currentUser.plan==='pro') {
+    bar.innerHTML=`<span style="font-size:.82rem;color:var(--gold)">✦ 专业版 · 无限使用</span>`;
+  } else {
+    const pdfUsed=currentUser.pdf_count||0, qUsed=currentUser.query_count_today||0;
+    const warn = pdfUsed>=4||qUsed>=16;
+    bar.innerHTML=`<div style="font-size:.82rem;color:var(--muted)">
+      PDF: <strong style="color:${pdfUsed>=5?'#f87171':'var(--fg)'}">${pdfUsed}/5</strong>
+      <span style="margin:0 10px;opacity:.3">|</span>
+      今日提问: <strong style="color:${qUsed>=20?'#f87171':'var(--fg)'}">${qUsed}/20</strong>
+      <span style="font-size:.7rem;margin-left:6px;background:rgba(255,255,255,.07);padding:2px 7px;border-radius:3px">免费版</span>
+    </div>
+    ${warn?`<button onclick="openPayment('pro')" class="btn-plan-primary" style="padding:6px 16px;border-radius:5px;font-size:.78rem;border:none;cursor:pointer">升级专业版</button>`:''}`;
+  }
+}
+
+// ── 初始化认证状态 ────────────────────────────────────────────
+async function checkAuth() {
+  const tok = localStorage.getItem('auth_token');
+  if (!tok) { showAuthGate(); updateNavbar(); return; }
+  try {
+    const res = await fetch(`${API}/api/auth/me`, { headers: { 'Authorization': `Bearer ${tok}` } });
+    if (!res.ok) { localStorage.removeItem('auth_token'); showAuthGate(); updateNavbar(); return; }
+    currentUser = await res.json();
+    updateNavbar(); showApp();
+  } catch { showAuthGate(); updateNavbar(); }
+}
 
 // ── 支付弹窗 ──────────────────────────────────────────────────
 const PAY_INFO = {
@@ -755,7 +916,8 @@ document.getElementById('pay-modal').addEventListener('click', e => {
 const appSection = document.getElementById('app');
 const qaBar      = document.getElementById('qaBar');
 new IntersectionObserver(entries => {
-  qaBar.style.display = entries[0].isIntersecting ? 'block' : 'none';
+  if (entries[0].isIntersecting && currentUser) qaBar.style.display='block';
+  else qaBar.style.display='none';
 }, { threshold: 0.05 }).observe(appSection);
 
 // ── 滚动 ──────────────────────────────────────────────────────
@@ -817,7 +979,7 @@ async function askSectionSummary(sec) {
 // ── 文档列表 ──────────────────────────────────────────────────
 async function loadDocuments() {
   try {
-    const docs = await (await fetch(`${API}/api/documents`)).json();
+    const docs = await (await authFetch(`${API}/api/documents`)).json();
     allDocs = docs;
     for (const id of [...selectedDocs]) if (!docs.find(d=>d.doc_id===id)) selectedDocs.delete(id);
     const list = document.getElementById('docList');
@@ -861,7 +1023,7 @@ async function toggleSectionPanel(docId) {
   }
   const tagsEl = document.getElementById(`st-${docId}`);
   try {
-    const data = await (await fetch(`${API}/api/documents/${docId}/sections`)).json();
+    const data = await (await authFetch(`${API}/api/documents/${docId}/sections`)).json();
     if (!data.sections.length) { tagsEl.textContent='未检测到章节结构'; return; }
     tagsEl.innerHTML = data.sections.map(sec=>
       `<button class="abtn-section" data-section="${esc(sec)}" onclick="askSectionSummary('${escA(sec)}')">${esc(sec)}</button>`
@@ -885,7 +1047,7 @@ function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').re
 function escA(s) { return String(s).replace(/'/g,"\\'"); }
 async function deleteDoc(docId, name) {
   if (!confirm(`确认删除「${name}」？`)) return;
-  await fetch(`${API}/api/documents/${docId}`,{method:'DELETE'});
+  await authFetch(`${API}/api/documents/${docId}`,{method:'DELETE'});
   selectedDocs.delete(docId); loadDocuments(); loadStats();
 }
 
@@ -897,7 +1059,7 @@ document.getElementById('fileInput').addEventListener('change', async e => {
     status.textContent=`⏳ 正在上传：${file.name}…`;
     const form=new FormData(); form.append('file',file);
     try{
-      const res=await fetch(`${API}/api/upload`,{method:'POST',body:form});
+      const res=await authFetch(`${API}/api/upload`,{method:'POST',body:form});
       const d=await res.json();
       if(res.ok){status.textContent=`✅ ${file.name} 上传成功，处理中…`;pollStatus(d.doc_id);}
       else{status.textContent=`❌ 上传失败：${d.detail||JSON.stringify(d)}`;}
@@ -907,13 +1069,13 @@ document.getElementById('fileInput').addEventListener('change', async e => {
 });
 async function pollStatus(docId){
   const iv=setInterval(async()=>{
-    try{const r=await fetch(`${API}/api/documents/${docId}/status`);const d=await r.json();
+    try{const r=await authFetch(`${API}/api/documents/${docId}/status`);const d=await r.json();
       if(d.status==='ready'||d.status==='error'){clearInterval(iv);loadDocuments();loadStats();}}
     catch{clearInterval(iv);}
   },3000);
 }
 async function loadStats(){
-  try{const r=await fetch(`${API}/api/stats`);const d=await r.json();
+  try{const r=await authFetch(`${API}/api/stats`);const d=await r.json();
     document.getElementById('statsBar').textContent=`知识库共 ${d.total_vectors} 个向量块`;}catch{}
 }
 
@@ -943,7 +1105,7 @@ async function askQuestion(overrideQ){
   let fullText='',finalSources=[],rafPending=false;
   try{
     const body={question:q,doc_ids:selectedDocs.size>0?[...selectedDocs]:[],section:sec};
-    const res=await fetch(`${API}/api/ask/stream`,{method:'POST',
+    const res=await authFetch(`${API}/api/ask/stream`,{method:'POST',
       headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     if(!res.ok) throw new Error(`HTTP ${res.status}`);
     const reader=res.body.getReader(),decoder=new TextDecoder();
@@ -980,9 +1142,8 @@ function toggleFaq(btn){ btn.closest('.faq-item').classList.toggle('open'); }
 
 // ── 初始化 ────────────────────────────────────────────────────
 renderHistory();
-loadDocuments();
-loadStats();
-setInterval(loadDocuments, 10000);
+checkAuth();
+setInterval(()=>{ if(currentUser) loadDocuments(); }, 10000);
 </script>
 </body>
 </html>
