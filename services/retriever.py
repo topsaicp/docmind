@@ -55,6 +55,18 @@ _MULTI_DOC_KEYWORDS = [
     'analyze', 'compare', 'overview', 'summarize', 'all', 'each', 'these',
 ]
 
+# 综述请求关键词
+_REVIEW_KEYWORDS = [
+    '综述', '文献综述', '研究综述', '写综述', '撰写综述', '综合分析',
+    '写一篇', '生成综述', '帮我写', 'literature review', 'write a review',
+]
+
+# 噪音章节（检索时排除）
+_NOISE_SECTIONS = {
+    'References（参考文献）', 'Acknowledgements（致谢）', 'Acknowledgments（致谢）',
+    'Appendix（附录）', 'Bibliography（书目）',
+}
+
 # 用于多文档分析时优先抓取的章节（最能代表论文核心的章节）
 _OVERVIEW_SECTIONS = [
     'Abstract（摘要）',
@@ -76,11 +88,15 @@ def _detect_section(question: str) -> str | None:
 
 
 def _is_multi_doc_overview(question: str, doc_ids: list | None) -> bool:
-    """判断是否是多文档整体分析请求"""
     if not doc_ids or len(doc_ids) < 2:
         return False
     q = question.lower()
     return any(kw in q for kw in _MULTI_DOC_KEYWORDS)
+
+
+def _is_review_request(question: str) -> bool:
+    q = question.lower()
+    return any(kw in q for kw in _REVIEW_KEYWORDS)
 
 
 # ── 检索函数 ───────────────────────────────────────────────────────────
@@ -108,30 +124,66 @@ def retrieve(
 
 
 def retrieve_per_doc(query: str, doc_ids: list[str], chunks_per_doc: int = 4) -> dict[str, list[dict]]:
-    """
-    多文档分析：为每篇文档单独检索代表性内容。
-    先尝试抓摘要/引言/结论等核心章节，再补充与问题最相关的块。
-    """
+    """多文档分析：每篇单独检索，优先核心章节，过滤噪音章节。"""
     result = {}
     for doc_id in doc_ids:
         hits = []
         seen_chunks = set()
 
-        # 第一步：优先抓核心章节（摘要、引言、结论）
         for sec in _OVERVIEW_SECTIONS:
             sec_hits = search(query, top_k=2, doc_ids=[doc_id], section=sec)
             for h in sec_hits:
-                if h["chunk_id"] not in seen_chunks:
+                if h["chunk_id"] not in seen_chunks and h.get("section","") not in _NOISE_SECTIONS:
                     seen_chunks.add(h["chunk_id"])
                     hits.append(h)
             if len(hits) >= chunks_per_doc:
                 break
 
-        # 第二步：用查询语义补充（保证内容与问题相关）
         if len(hits) < chunks_per_doc:
             extra = search(query, top_k=chunks_per_doc * 2, doc_ids=[doc_id])
             for h in extra:
-                if h["chunk_id"] not in seen_chunks and len(hits) < chunks_per_doc:
+                if h["chunk_id"] not in seen_chunks \
+                        and h.get("section","") not in _NOISE_SECTIONS \
+                        and len(hits) < chunks_per_doc:
+                    seen_chunks.add(h["chunk_id"])
+                    hits.append(h)
+
+        result[doc_id] = hits
+    return result
+
+
+def retrieve_per_doc_for_review(query: str, doc_ids: list[str],
+                                chunks_per_doc: int = 12) -> dict[str, list[dict]]:
+    """综述模式：每篇抽取更多块，覆盖摘要/引言/方法/结果/结论各节。"""
+    REVIEW_SECTIONS = [
+        'Abstract（摘要）',
+        'Introduction（引言/简介）',
+        'Methodology（研究方法）', 'Methods（方法）',
+        'Results（结果）', 'Results and Discussion（结果与讨论）',
+        'Discussion（讨论）',
+        'Conclusion（结论）', 'Conclusions（结论）',
+        'Related Work（相关工作）',
+    ]
+    result = {}
+    for doc_id in doc_ids:
+        hits = []
+        seen_chunks = set()
+
+        # 每个核心章节各抓 2 块，保证章节覆盖均衡
+        for sec in REVIEW_SECTIONS:
+            sec_hits = search(query, top_k=2, doc_ids=[doc_id], section=sec)
+            for h in sec_hits:
+                if h["chunk_id"] not in seen_chunks and h.get("section","") not in _NOISE_SECTIONS:
+                    seen_chunks.add(h["chunk_id"])
+                    hits.append(h)
+
+        # 补充语义相关块到 chunks_per_doc
+        if len(hits) < chunks_per_doc:
+            extra = search(query, top_k=chunks_per_doc * 2, doc_ids=[doc_id])
+            for h in extra:
+                if h["chunk_id"] not in seen_chunks \
+                        and h.get("section","") not in _NOISE_SECTIONS \
+                        and len(hits) < chunks_per_doc:
                     seen_chunks.add(h["chunk_id"])
                     hits.append(h)
 
@@ -175,20 +227,58 @@ def ask(
     section:  str | None = None,
 ):
     # ── 模式判断 ──
-    is_multi = _is_multi_doc_overview(question, doc_ids)
+    is_review = _is_review_request(question) and doc_ids and len(doc_ids) >= 1
+    is_multi  = _is_multi_doc_overview(question, doc_ids) and not is_review
 
-    if is_multi:
-        # 多文档并行分析模式
+    if is_review:
+        # ── 综述模式：大量抽块 + 学术写作提示词 ──
+        target_ids = doc_ids if doc_ids else []
+        per_doc  = retrieve_per_doc_for_review(question, target_ids, chunks_per_doc=12)
+        context, sources = build_multi_doc_context(per_doc)
+        doc_count = len([v for v in per_doc.values() if v])
+        prompt = f"""你是一位资深学术写作专家。请基于以下 {doc_count} 篇文献的内容，撰写一篇规范的学术文献综述。
+
+【格式要求】严格按以下结构：
+一、引言
+  - 阐述研究背景与意义，说明本综述涵盖的主题范围
+
+二、研究现状
+  - 按研究主题或技术路线横向分段（不要逐篇描述）
+  - 每个子主题下整合多篇文献的相关观点
+
+三、对比分析
+  - 比较各研究在方法、数据、结论上的异同
+  - 客观评价各自优缺点
+
+四、不足与展望
+  - 指出现有研究的局限性
+  - 提出未来研究方向
+
+五、结语
+  - 简洁总结综述核心发现
+
+【行文规范】
+- 使用学术书面语，段落之间有过渡句，禁止使用项目符号列表
+- 适当标注文献来源（使用文件名），但不要在每句话后都加来源
+- 字数不少于1200字
+
+参考文献内容（已按文献分组）：
+{context}
+
+用户要求：{question}"""
+
+    elif is_multi:
+        # ── 多文档对比分析模式 ──
         per_doc = retrieve_per_doc(question, doc_ids, chunks_per_doc=4)
         context, sources = build_multi_doc_context(per_doc)
         doc_count = len([v for v in per_doc.values() if v])
-        prompt = f"""你是专业学术文献分析助手。用户选择了 {doc_count} 篇文献，请逐篇分析，给出结构化报告。
+        prompt = f"""你是专业学术文献分析助手。用户选择了 {doc_count} 篇文献，请逐篇分析后给出综合报告。
 
 要求：
 - 每篇文献单独一节，用"## 文献X：[文件名]"作为标题
-- 每篇包含：研究主题、核心方法、主要结论（如内容不足可说明）
-- 最后加一节"## 综合对比"，比较各篇的异同或关联
-- 全程使用中文，条理清晰
+- 每篇包含：研究主题、核心方法、主要结论
+- 最后加"## 综合对比"一节，横向比较各篇的异同与关联
+- 全程使用中文，语言简洁准确
 
 参考内容（已按文献分组）：
 {context}
@@ -196,22 +286,22 @@ def ask(
 用户请求：{question}"""
 
     else:
-        # 常规单文档/全库检索模式
+        # ── 常规单文档/章节检索模式 ──
         hits    = retrieve(question, doc_ids=doc_ids, section=section)
         context = build_context(hits)
         sources = [
             {"filename": h["filename"], "score": h["score"], "section": h.get("section", "")}
             for h in hits
         ]
-        task_hint = f'用户当前正在阅读【{section}】章节，请围绕该章节内容作答。' if section \
-                    else '请根据参考文档内容回答用户问题。'
+        task_hint = f'用户当前正在阅读【{section}】章节，请围绕该章节内容深度解读。' if section \
+                    else '请根据参考文档内容精准回答用户问题。'
         prompt = f"""你是专业学术文献助手。{task_hint}
 
 规则：
-- 只使用下方参考文档中的内容，不引入外部知识。
-- 默认用中文回答；用户若用英文提问可用英文回答。
-- 回答结构清晰，引用信息时注明来源章节。
-- 若文档中没有相关内容，明确说明"提供的文档中未找到该信息"。
+- 只使用下方参考文档中的内容，不引入外部知识
+- 默认用中文回答；用户若用英文提问可用英文回答
+- 回答结构清晰，引用信息时注明来源章节
+- 若文档中没有相关内容，明确说明"提供的文档中未找到该信息"
 
 参考文档：
 {context}

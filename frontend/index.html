@@ -717,7 +717,10 @@ input, textarea { font-family: inherit; }
     <div class="ak-card">
       <div class="ak-card-head">
         <span class="ak-card-title">AI 问答</span>
-        <button class="abtn abtn-ghost" onclick="clearHistory()">🗑 清空历史</button>
+        <div style="display:flex;gap:6px">
+          <button class="abtn abtn-ghost" onclick="generateReview()" title="基于已选文献生成学术综述">📝 生成综述</button>
+          <button class="abtn abtn-ghost" onclick="clearHistory()">🗑 清空历史</button>
+        </div>
       </div>
       <div class="chat-history" id="chatHistory">
         <div class="chat-empty" id="emptyTip">暂无对话记录 — 在下方输入问题或点击章节按钮开始</div>
@@ -1138,6 +1141,23 @@ async function askQuestion(overrideQ){
     document.getElementById('questionInput').focus();
   }
 }
+// ── 生成综述 ──────────────────────────────────────────────────
+function generateReview() {
+  if (allDocs.filter(d=>d.status==='ready').length === 0) {
+    alert('请先上传并处理 PDF 文献'); return;
+  }
+  // 自动全选已就绪文献
+  const ids = allDocs.filter(d=>d.status==='ready').map(d=>d.doc_id);
+  ids.forEach(id => selectedDocs.add(id));
+  document.querySelectorAll('.doc-check').forEach(cb=>{ cb.checked=selectedDocs.has(cb.dataset.id); });
+  updateSelectTip();
+  // 填入综述指令并发送
+  const q = `请基于以上选中的 ${ids.length} 篇文献，撰写一篇学术文献综述`;
+  document.getElementById('questionInput').value = q;
+  document.querySelector('#app').scrollIntoView({behavior:'smooth'});
+  setTimeout(() => askQuestion(q), 400);
+}
+
 function toggleFaq(btn){ btn.closest('.faq-item').classList.toggle('open'); }
 
 // ── 初始化 ────────────────────────────────────────────────────
