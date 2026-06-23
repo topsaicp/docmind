@@ -322,6 +322,22 @@ input, textarea { font-family: inherit; }
                  padding-top: 24px; border-top: 1px solid var(--border);
                  font-size: .75rem; color: rgba(255,255,255,.2); }
 
+/* Message action buttons */
+.msg-actions { display:flex; gap:6px; margin-top:5px; }
+.msg-act-btn { background:transparent; border:1px solid var(--border); color:var(--muted);
+               font-size:.72rem; padding:3px 10px; border-radius:4px; cursor:pointer;
+               transition:all .15s; }
+.msg-act-btn:hover { border-color:rgba(201,168,76,.4); color:var(--gold); }
+.msg-act-btn.copied { color:#4ade80; border-color:#4ade80; }
+
+/* Upload progress bar */
+.upload-progress-wrap { display:flex; align-items:center; gap:6px; margin-top:3px; }
+.upload-progress-bar { flex:1; height:4px; background:rgba(255,255,255,.08);
+                       border-radius:2px; overflow:hidden; }
+.upload-progress-fill { height:100%; background:var(--gold); border-radius:2px;
+                        transition:width .2s; }
+.upload-progress-pct { font-size:.72rem; color:var(--gold); min-width:30px; }
+
 /* Pay modal */
 #pay-modal { display: none; position: fixed; inset: 0; z-index: 500;
              background: rgba(0,0,0,.72); backdrop-filter: blur(6px);
@@ -945,6 +961,28 @@ function renderHistory() {
   for (const item of h) appendQA(item.question, item.answer, item.sources, item.time, item.section||'');
   scrollToBottom();
 }
+function msgActionsHtml(text, question, sec) {
+  const q64  = btoa(unescape(encodeURIComponent(question)));
+  const s64  = btoa(unescape(encodeURIComponent(sec||'')));
+  return `<div class="msg-actions">
+    <button class="msg-act-btn" onclick="copyBubble(this,'${btoa(unescape(encodeURIComponent(text)))}')">📋 复制</button>
+    <button class="msg-act-btn" onclick="regenMsg('${q64}','${s64}')">🔄 重新生成</button>
+  </div>`;
+}
+function copyBubble(btn, b64) {
+  const text = decodeURIComponent(escape(atob(b64)));
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent='✅ 已复制'; btn.classList.add('copied');
+    setTimeout(()=>{ btn.textContent='📋 复制'; btn.classList.remove('copied'); }, 1800);
+  });
+}
+function regenMsg(q64, s64) {
+  const q = decodeURIComponent(escape(atob(q64)));
+  const s = decodeURIComponent(escape(atob(s64)));
+  if (s) setSection(s);
+  askQuestion(q);
+}
+
 function appendQA(q, answer, sources, time, sec) {
   const box = document.getElementById('chatHistory');
   const tip = document.getElementById('emptyTip'); if(tip) tip.remove();
@@ -959,6 +997,7 @@ function appendQA(q, answer, sources, time, sec) {
     ? `<div class="msg-sources">${sources.map(s=>`<span class="src-tag" title="${(s.score*100).toFixed(0)}%相关${s.section?' · '+s.section:''}">${esc(s.filename)}</span>`).join('')}</div>`:'';
   aEl.innerHTML=`<div class="msg-a">
     <div class="bubble">${esc(answer)}</div>${srcHtml}
+    ${msgActionsHtml(answer, q, sec)}
     <div class="msg-time">${formatTime(time)}</div></div>`;
   box.appendChild(aEl);
 }
@@ -1055,18 +1094,44 @@ async function deleteDoc(docId, name) {
 }
 
 // ── 上传 ──────────────────────────────────────────────────────
+function xhrUpload(file, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr  = new XMLHttpRequest();
+    const form = new FormData();
+    form.append('file', file);
+    xhr.upload.onprogress = e => {
+      if (e.lengthComputable) onProgress(Math.round(e.loaded / e.total * 100));
+    };
+    xhr.onload = () => {
+      try { const d = JSON.parse(xhr.responseText); xhr.status < 300 ? resolve(d) : reject(d); }
+      catch { reject({ detail: '解析响应失败' }); }
+    };
+    xhr.onerror = () => reject({ detail: '网络错误' });
+    const tok = localStorage.getItem('auth_token');
+    xhr.open('POST', `${API}/api/upload`);
+    if (tok) xhr.setRequestHeader('Authorization', `Bearer ${tok}`);
+    xhr.send(form);
+  });
+}
+
 document.getElementById('fileInput').addEventListener('change', async e => {
   const files=[...e.target.files]; if(!files.length) return;
   const statusEl = document.getElementById('uploadStatus');
+  const fileStates = files.map(f => ({ name: f.name, state: 'pending', pct: 0 }));
 
-  // 初始化每个文件的状态行
-  const fileStates = files.map(f => ({ name: f.name, state: 'pending' }));
   function renderUploadList() {
     const doneCount = fileStates.filter(f=>f.state==='ok'||f.state==='err').length;
     const allDone   = doneCount === files.length;
     const lines = fileStates.map(f => {
-      const icon = f.state==='pending'?'⏸' : f.state==='uploading'?'⏳' : f.state==='ok'?'✅':'❌';
-      return `<div style="font-size:.82rem;padding:2px 0">${icon} ${esc(f.name)}</div>`;
+      const icon = f.state==='pending'?'<span style="color:var(--muted)">⏸</span>'
+                 : f.state==='ok'?'<span style="color:#4ade80">✅</span>'
+                 : f.state==='err'?'<span style="color:#f87171">❌</span>':'';
+      const bar = f.state==='uploading'
+        ? `<div class="upload-progress-wrap">
+             <div class="upload-progress-bar"><div class="upload-progress-fill" style="width:${f.pct}%"></div></div>
+             <span class="upload-progress-pct">${f.pct}%</span>
+           </div>` : '';
+      return `<div style="font-size:.82rem;padding:3px 0">${icon} ${esc(f.name)}${bar}</div>`;
     }).join('');
     const summary = allDone
       ? `<div style="margin-top:8px;font-size:.82rem;color:var(--gold)">✦ 全部 ${files.length} 个文件上传完毕，后台处理中…</div>`
@@ -1075,19 +1140,19 @@ document.getElementById('fileInput').addEventListener('change', async e => {
   }
 
   renderUploadList();
-
-  for(let i=0;i<files.length;i++){
-    fileStates[i].state='uploading'; renderUploadList();
-    const form=new FormData(); form.append('file',files[i]);
-    try{
-      const res=await authFetch(`${API}/api/upload`,{method:'POST',body:form});
-      const d=await res.json();
-      if(res.ok){ fileStates[i].state='ok'; pollStatus(d.doc_id); }
-      else{ fileStates[i].state='err'; fileStates[i].name+=`（${d.detail||'失败'}）`; }
-    }catch(err){ fileStates[i].state='err'; fileStates[i].name+=`（网络错误）`; }
+  for (let i = 0; i < files.length; i++) {
+    fileStates[i].state = 'uploading'; renderUploadList();
+    try {
+      const d = await xhrUpload(files[i], pct => { fileStates[i].pct = pct; renderUploadList(); });
+      fileStates[i].state = 'ok'; fileStates[i].pct = 100;
+      pollStatus(d.doc_id);
+    } catch(err) {
+      fileStates[i].state = 'err';
+      fileStates[i].name += `（${err.detail||'失败'}）`;
+    }
     renderUploadList();
   }
-  e.target.value=''; loadDocuments(); updateUsageBar();
+  e.target.value = ''; loadDocuments(); updateUsageBar();
 });
 async function pollStatus(docId){
   const iv=setInterval(async()=>{
@@ -1149,7 +1214,12 @@ async function askQuestion(overrideQ){
         }catch{}
       }
     }
-    bubble.classList.remove('streaming'); scrollToBottom();
+    bubble.classList.remove('streaming');
+    aMsgDiv.insertBefore(
+      Object.assign(document.createElement('div'), {innerHTML: msgActionsHtml(fullText, q, sec)}).firstElementChild,
+      srcEl
+    );
+    scrollToBottom();
     const history=loadHistory();
     history.push({question:q,answer:fullText,sources:finalSources,time:now,section:sec});
     saveHistory(history);
