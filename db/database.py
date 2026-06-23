@@ -3,10 +3,18 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 from pathlib import Path
-import uuid
+import os, uuid
 
-DB_PATH = Path(__file__).parent.parent / "kb.db"
-engine  = create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread": False})
+_DATABASE_URL = os.getenv("DATABASE_URL", "")
+
+if _DATABASE_URL:
+    # 生产环境：PostgreSQL (Supabase / Railway Postgres)
+    engine = create_engine(_DATABASE_URL, pool_pre_ping=True, pool_recycle=300)
+else:
+    # 本地开发：SQLite
+    DB_PATH = Path(__file__).parent.parent / "kb.db"
+    engine  = create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread": False})
+
 Session = sessionmaker(bind=engine)
 Base    = declarative_base()
 
