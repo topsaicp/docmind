@@ -68,6 +68,21 @@ def collection_count() -> int:
     return _get_collection().count()
 
 
+def get_doc_header(doc_id: str, n: int = 3) -> list[dict]:
+    """返回文档最前面的 n 个 chunk（含作者/标题/年份/期刊信息）"""
+    collection = _get_collection()
+    results    = collection.get(where={"doc_id": doc_id},
+                                include=["documents", "metadatas"])
+    if not results["ids"]:
+        return []
+    items = sorted(
+        zip(results["documents"], results["metadatas"]),
+        key=lambda x: int(x[1].get("chunk_id", 0))
+    )
+    return [{"text": t, "filename": m["filename"], "doc_id": m["doc_id"],
+             "section": m.get("section", "")} for t, m in items[:n]]
+
+
 def get_doc_sections(doc_id: str) -> list[str]:
     collection = _get_collection()
     results    = collection.get(where={"doc_id": doc_id}, include=["metadatas"])

@@ -4,7 +4,7 @@
 """
 from openai import OpenAI
 from config import DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, LLM_MODEL, TOP_K
-from services.embedder import search, get_doc_sections
+from services.embedder import search, get_doc_sections, get_doc_header
 
 _client = None
 
@@ -231,44 +231,48 @@ def ask(
     is_multi  = _is_multi_doc_overview(question, doc_ids) and not is_review
 
     if is_review:
-        # ── 综述模式：大量抽块 + 学术写作提示词 ──
+        # ── 综述模式：大量抽块 + 首页元信息 + 学术写作提示词 ──
         target_ids = doc_ids if doc_ids else []
-        per_doc  = retrieve_per_doc_for_review(question, target_ids, chunks_per_doc=12)
+        per_doc    = retrieve_per_doc_for_review(question, target_ids, chunks_per_doc=12)
         context, sources = build_multi_doc_context(per_doc)
-        doc_count = len([v for v in per_doc.values() if v])
+        doc_count  = len([v for v in per_doc.values() if v])
+
+        # 收集每篇论文首页文本（含作者/标题/年份/期刊信息）
+        header_parts = []
+        for idx, doc_id in enumerate(target_ids, 1):
+            headers = get_doc_header(doc_id, n=3)
+            if headers:
+                header_text = "\n".join(h["text"] for h in headers)
+                filename    = headers[0]["filename"]
+                header_parts.append(f"[{idx}] 文件：{filename}\n{header_text}")
+        headers_block = "\n\n---\n\n".join(header_parts)
+
         prompt = f"""你是一位资深学术写作专家。请基于以下 {doc_count} 篇文献的内容，撰写一篇规范的学术文献综述。
 
-【格式要求】严格按以下结构：
-一、引言
-  - 阐述研究背景与意义，说明本综述涵盖的主题范围
-
-二、研究现状
-  - 按研究主题或技术路线横向分段（不要逐篇描述）
-  - 每个子主题下整合多篇文献的相关观点
-
-三、对比分析
-  - 比较各研究在方法、数据、结论上的异同
-  - 客观评价各自优缺点
-
-四、不足与展望
-  - 指出现有研究的局限性
-  - 提出未来研究方向
-
-五、结语
-  - 简洁总结综述核心发现
+【正文格式】严格按以下结构：
+一、引言（研究背景与意义，综述主题范围）
+二、研究现状（按主题横向分段，整合多篇文献观点，不要逐篇描述）
+三、对比分析（方法、数据、结论的异同，客观评价优缺点）
+四、不足与展望（现有局限性，未来研究方向）
+五、结语（简洁总结核心发现）
 
 【行文规范】
-- 使用学术书面语，段落之间有过渡句，禁止使用项目符号列表
-- 正文中引用观点时用 [1][2] 等编号上标标注来源
+- 使用学术书面语，段落之间有过渡句，禁止项目符号列表
+- 正文引用观点时标注编号，如（[1]）（[2][3]）
 - 字数不少于1200字
 
-【结尾必须附参考文献列表】格式如下：
-参考文献
-[1] 文件名1
-[2] 文件名2
-……按正文中出现顺序排列，每条一行
+【参考文献】
+- 正文结束后，另起一行写"参考文献"作为标题
+- 根据下方每篇论文的首页信息（含作者、标题、年份、期刊等），按 APA 第7版格式逐条列出
+- APA格式示例：Author, A., & Author, B. (Year). Title of article. Journal Name, Volume(Issue), Pages. https://doi.org/xxxxx
+- 编号与正文中的引用编号对应，按出现顺序排列
 
-参考文献内容（已按文献分组）：
+══════════════════════════════════════
+各篇论文首页信息（用于提取APA参考文献）：
+{headers_block}
+
+══════════════════════════════════════
+各篇论文正文内容（用于撰写综述）：
 {context}
 
 用户要求：{question}"""
