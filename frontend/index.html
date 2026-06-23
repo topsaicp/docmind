@@ -1057,18 +1057,37 @@ async function deleteDoc(docId, name) {
 // ── 上传 ──────────────────────────────────────────────────────
 document.getElementById('fileInput').addEventListener('change', async e => {
   const files=[...e.target.files]; if(!files.length) return;
-  const status=document.getElementById('uploadStatus');
-  for(const file of files){
-    status.textContent=`⏳ 正在上传：${file.name}…`;
-    const form=new FormData(); form.append('file',file);
+  const statusEl = document.getElementById('uploadStatus');
+
+  // 初始化每个文件的状态行
+  const fileStates = files.map(f => ({ name: f.name, state: 'pending' }));
+  function renderUploadList() {
+    const doneCount = fileStates.filter(f=>f.state==='ok'||f.state==='err').length;
+    const allDone   = doneCount === files.length;
+    const lines = fileStates.map(f => {
+      const icon = f.state==='pending'?'⏸' : f.state==='uploading'?'⏳' : f.state==='ok'?'✅':'❌';
+      return `<div style="font-size:.82rem;padding:2px 0">${icon} ${esc(f.name)}</div>`;
+    }).join('');
+    const summary = allDone
+      ? `<div style="margin-top:8px;font-size:.82rem;color:var(--gold)">✦ 全部 ${files.length} 个文件上传完毕，后台处理中…</div>`
+      : `<div style="font-size:.75rem;color:var(--muted);margin-top:6px">${doneCount}/${files.length} 已完成</div>`;
+    statusEl.innerHTML = lines + summary;
+  }
+
+  renderUploadList();
+
+  for(let i=0;i<files.length;i++){
+    fileStates[i].state='uploading'; renderUploadList();
+    const form=new FormData(); form.append('file',files[i]);
     try{
       const res=await authFetch(`${API}/api/upload`,{method:'POST',body:form});
       const d=await res.json();
-      if(res.ok){status.textContent=`✅ ${file.name} 上传成功，处理中…`;pollStatus(d.doc_id);}
-      else{status.textContent=`❌ 上传失败：${d.detail||JSON.stringify(d)}`;}
-    }catch(err){status.textContent=`❌ 网络错误：${err.message}`;}
+      if(res.ok){ fileStates[i].state='ok'; pollStatus(d.doc_id); }
+      else{ fileStates[i].state='err'; fileStates[i].name+=`（${d.detail||'失败'}）`; }
+    }catch(err){ fileStates[i].state='err'; fileStates[i].name+=`（网络错误）`; }
+    renderUploadList();
   }
-  e.target.value=''; loadDocuments();
+  e.target.value=''; loadDocuments(); updateUsageBar();
 });
 async function pollStatus(docId){
   const iv=setInterval(async()=>{
