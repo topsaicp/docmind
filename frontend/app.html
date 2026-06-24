@@ -294,7 +294,6 @@ input,textarea{font-family:inherit}
     <div class="chat-area" id="chatHistory">
       <div class="chat-empty" id="emptyTip">从左侧选择文献，在下方输入问题开始对话</div>
     </div>
-    <div id="chatBottom"></div>
   </div>
 
 </div>
@@ -450,7 +449,10 @@ function renderHistory() {
 // ── Message helpers ───────────────────────────────────────────
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 function escA(s){return String(s).replace(/'/g,"\\'")}
-function scrollToBottom(){requestAnimationFrame(()=>document.getElementById('chatBottom').scrollIntoView({block:'end'}))}
+function scrollToBottom(){
+  const el=document.getElementById('chatHistory');
+  requestAnimationFrame(()=>{el.scrollTop=el.scrollHeight;});
+}
 
 function msgActionsHtml(text,question,sec){
   const q64=btoa(unescape(encodeURIComponent(question)));
