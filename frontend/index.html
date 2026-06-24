@@ -394,7 +394,7 @@ input, textarea { font-family: inherit; }
       <a href="#features">核心功能</a>
       <a href="#pricing">定价方案</a>
       <a href="#faq">常见问题</a>
-      <a href="#app">开始使用</a>
+      <a href="/app">进入工作台</a>
     </div>
     <div class="nav-ctas" id="navCtas">
       <button class="btn-ghost-nav" onclick="openAuth('login')">登录</button>
@@ -417,7 +417,7 @@ input, textarea { font-family: inherit; }
       支持自由提问与按章节精读——摘要、引言、结论，一键定向解读。
     </p>
     <div class="hero-btns">
-      <a href="#app" class="btn-hero-primary">立即上传文献 →</a>
+      <a href="/app" class="btn-hero-primary" id="heroPrimaryBtn">立即上传文献 →</a>
       <a href="#how" class="btn-hero-outline">了解工作原理</a>
     </div>
     <div class="hero-mockup">
@@ -561,7 +561,7 @@ input, textarea { font-family: inherit; }
           <li><span class="plan-check">✦</span> 章节解读</li>
           <li><span class="plan-check">✦</span> 对话历史保存</li>
         </ul>
-        <a href="#app" class="btn-plan-ghost">免费开始</a>
+        <a href="/app" class="btn-plan-ghost">免费开始</a>
       </div>
       <div class="plan-card highlight">
         <div class="plan-badge">最受欢迎</div>
@@ -686,65 +686,17 @@ input, textarea { font-family: inherit; }
   </div>
 </section>
 
-<!-- ═══ APP ════════════════════════════════════════════════════ -->
-<section id="app">
-  <div class="app-header">
-    <div class="section-label" style="margin-bottom:14px">开始使用</div>
-    <h2 class="section-title" style="font-size:clamp(1.6rem,4vw,2.4rem)">上传你的第一篇文献</h2>
-    <p style="color:var(--muted);font-size:.88rem;margin-top:12px">上传后约 30–90 秒完成处理，即可开始提问</p>
-  </div>
-  <!-- 未登录提示 -->
-  <div id="authGate" style="display:none;text-align:center;padding:60px 24px">
-    <div style="font-size:2.5rem;margin-bottom:16px">🔒</div>
-    <h3 style="font-family:'Playfair Display',serif;font-size:1.4rem;margin-bottom:10px">登录后即可使用</h3>
-    <p style="color:var(--muted);font-size:.88rem;margin-bottom:24px">注册免费账号，立即开始上传 PDF 并智能问答</p>
-    <button onclick="openAuth('register')" class="btn-plan-primary" style="padding:12px 32px;border-radius:7px;font-size:.92rem;border:none;cursor:pointer">免费注册</button>
-    <span style="color:var(--muted);margin:0 12px;font-size:.85rem">或</span>
-    <button onclick="openAuth('login')" style="background:transparent;border:1px solid var(--border);color:var(--fg);padding:11px 24px;border-radius:7px;font-size:.88rem;cursor:pointer">已有账号，登录</button>
-  </div>
-
-  <div id="appContent" style="display:none">
-  <div class="usage-bar" id="usageBar"></div>
-  <div class="app-wrap">
-    <!-- 上传 -->
-    <div class="ak-card">
-      <div class="ak-card-head"><span class="ak-card-title">上传 PDF</span></div>
-      <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
-        <input type="file" id="fileInput" accept=".pdf" multiple>
-        <div class="upload-icon">📄</div>
-        <div class="upload-main">点击选择 PDF 文件</div>
-        <div class="upload-hint">支持多文件上传，单文件最大 50MB</div>
-      </div>
-      <div id="uploadStatus"></div>
-    </div>
-    <!-- 文档库 -->
-    <div class="ak-card">
-      <div class="ak-card-head">
-        <span class="ak-card-title">文档库</span>
-        <div class="select-bar">
-          <span id="selectTip">查询范围：全部文档</span>
-          <button class="abtn abtn-ghost" onclick="toggleSelectAll()">全选 / 取消</button>
-        </div>
-      </div>
-      <ul class="doc-list" id="docList"><li class="empty-msg">暂无文档，请先上传 PDF</li></ul>
-      <div class="stats-tip" id="statsBar">加载中…</div>
-    </div>
-    <!-- 对话 -->
-    <div class="ak-card">
-      <div class="ak-card-head">
-        <span class="ak-card-title">AI 问答</span>
-        <div style="display:flex;gap:6px">
-          <button class="abtn abtn-ghost" onclick="generateReview()" title="基于已选文献生成学术综述">📝 生成综述</button>
-          <button class="abtn abtn-ghost" onclick="clearHistory()">🗑 清空历史</button>
-        </div>
-      </div>
-      <div class="chat-history" id="chatHistory">
-        <div class="chat-empty" id="emptyTip">暂无对话记录 — 在下方输入问题或点击章节按钮开始</div>
-      </div>
-      <div id="chatBottom"></div>
+<!-- ═══ CTA BANNER ═══════════════════════════════════════════════ -->
+<section id="cta-banner" style="padding:80px 24px;border-top:1px solid var(--border);text-align:center">
+  <div class="wrap-sm">
+    <div class="section-label" style="margin-bottom:14px">立即体验</div>
+    <h2 class="section-title" style="font-size:clamp(1.6rem,4vw,2.4rem)">开始你的第一次文献对话</h2>
+    <p style="color:var(--muted);font-size:.9rem;margin-top:14px;margin-bottom:32px">上传后约 30–90 秒完成处理，即可开始提问</p>
+    <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap">
+      <a href="/app" class="btn-hero-primary" id="ctaBtn">免费开始使用 →</a>
+      <button onclick="openAuth('register')" class="btn-hero-outline">注册账号</button>
     </div>
   </div>
-  </div><!-- /appContent -->
 </section>
 
 <!-- ═══ FOOTER ════════════════════════════════════════════════ -->
@@ -761,7 +713,7 @@ input, textarea { font-family: inherit; }
           <li><a href="#how">工作原理</a></li>
           <li><a href="#features">核心功能</a></li>
           <li><a href="#pricing">定价方案</a></li>
-          <li><a href="#app">立即使用</a></li>
+          <li><a href="/app">立即使用</a></li>
         </ul>
       </div>
       <div>
@@ -786,467 +738,98 @@ input, textarea { font-family: inherit; }
   </div>
 </footer>
 
-<!-- ═══ FIXED INPUT BAR ════════════════════════════════════════ -->
-<div class="qa-bar" id="qaBar" style="display:none">
-  <div class="qa-bar-inner">
-    <div class="qa-section-hint" id="sectionHint">
-      <span>📌 当前章节：<strong id="sectionHintName"></strong></span>
-      <button onclick="clearSection()">✕</button>
-    </div>
-    <div class="qa-row">
-      <textarea id="questionInput" rows="2"
-        placeholder="输入问题，Enter 发送；Shift+Enter 换行；或点击章节按钮定向解读…"
-        onkeydown="handleKey(event)"></textarea>
-      <button class="abtn abtn-gold" id="sendBtn" onclick="askQuestion()"
-              style="padding:10px 22px;font-size:.88rem">发送</button>
-    </div>
-  </div>
-</div>
 
 <script>
 const API = '';
-const HISTORY_KEY = 'kb_chat_history_v2';
-let selectedDocs  = new Set();
-let allDocs       = [];
-let isAsking      = false;
-let activeSection = '';
-let currentUser   = null;
-let authMode      = 'login';
-
-// ── Auth helpers ──────────────────────────────────────────────
-function getAuthHeaders() {
-  const tok = localStorage.getItem('auth_token');
-  return tok ? { 'Authorization': `Bearer ${tok}` } : {};
-}
-async function authFetch(url, options = {}) {
-  const headers = { ...(options.headers || {}), ...getAuthHeaders() };
-  const res = await fetch(url, { ...options, headers });
-  if (res.status === 401) {
-    localStorage.removeItem('auth_token');
-    currentUser = null;
-    updateNavbar();
-    showAuthGate();
-    throw new Error('请先登录');
-  }
-  return res;
-}
+let currentUser = null;
+let authMode    = 'login';
 
 // ── Auth modal ────────────────────────────────────────────────
-function openAuth(mode = 'login') { authMode = mode; switchTab(mode); document.getElementById('auth-modal').classList.add('show'); setTimeout(()=>document.getElementById('auth-email').focus(),80); }
-function closeAuth() { document.getElementById('auth-modal').classList.remove('show'); document.getElementById('auth-error').style.display='none'; }
+function openAuth(mode='login') {
+  authMode=mode; switchTab(mode);
+  document.getElementById('auth-modal').classList.add('show');
+  setTimeout(()=>document.getElementById('auth-email').focus(),80);
+}
+function closeAuth() {
+  document.getElementById('auth-modal').classList.remove('show');
+  document.getElementById('auth-error').style.display='none';
+}
 function switchTab(mode) {
-  authMode = mode;
-  document.getElementById('tab-login').classList.toggle('active', mode==='login');
-  document.getElementById('tab-register').classList.toggle('active', mode==='register');
-  document.getElementById('auth-submit').textContent = mode==='login'?'登录':'注册';
-  document.getElementById('auth-switch-hint').textContent = mode==='login'?'没有账号？':'已有账号？';
-  document.getElementById('auth-switch-link').textContent = mode==='login'?'免费注册':'立即登录';
-  document.getElementById('auth-switch-link').onclick = () => switchTab(mode==='login'?'register':'login');
+  authMode=mode;
+  document.getElementById('tab-login').classList.toggle('active',mode==='login');
+  document.getElementById('tab-register').classList.toggle('active',mode==='register');
+  document.getElementById('auth-submit').textContent=mode==='login'?'登录':'注册';
+  document.getElementById('auth-switch-hint').textContent=mode==='login'?'没有账号？':'已有账号？';
+  document.getElementById('auth-switch-link').textContent=mode==='login'?'免费注册':'立即登录';
+  document.getElementById('auth-switch-link').onclick=()=>switchTab(mode==='login'?'register':'login');
   document.getElementById('auth-error').style.display='none';
 }
 async function submitAuth() {
-  const email = document.getElementById('auth-email').value.trim();
-  const pwd   = document.getElementById('auth-password').value;
-  const btn   = document.getElementById('auth-submit');
-  if (!email.includes('@')) { showAuthErr('请输入有效邮箱'); return; }
-  if (pwd.length < 6)       { showAuthErr('密码至少6位'); return; }
+  const email=document.getElementById('auth-email').value.trim();
+  const pwd=document.getElementById('auth-password').value;
+  const btn=document.getElementById('auth-submit');
+  if(!email.includes('@')){showAuthErr('请输入有效邮箱');return;}
+  if(pwd.length<6){showAuthErr('密码至少6位');return;}
   btn.disabled=true; btn.textContent='请稍候…';
   try {
-    const url = authMode==='login' ? `${API}/api/auth/login` : `${API}/api/auth/register`;
-    const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,password:pwd}) });
-    const d   = await res.json();
-    if (!res.ok) { showAuthErr(d.detail||'操作失败'); return; }
-    localStorage.setItem('auth_token', d.token);
-    currentUser = { email:d.email, plan:d.plan, pdf_count:d.pdf_count||0, query_count_today:d.query_count_today||0 };
-    closeAuth(); updateNavbar(); showApp();
-  } catch(e) { showAuthErr('网络错误：'+e.message); }
-  finally { btn.disabled=false; btn.textContent=authMode==='login'?'登录':'注册'; }
+    const url=authMode==='login'?`${API}/api/auth/login`:`${API}/api/auth/register`;
+    const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pwd})});
+    const d=await res.json();
+    if(!res.ok){showAuthErr(d.detail||'操作失败');return;}
+    localStorage.setItem('auth_token',d.token);
+    window.location.href='/app';
+  }catch(e){showAuthErr('网络错误：'+e.message);}
+  finally{btn.disabled=false;btn.textContent=authMode==='login'?'登录':'注册';}
 }
-function showAuthErr(msg) { const e=document.getElementById('auth-error'); e.textContent=msg; e.style.display='block'; }
-function logout() { localStorage.removeItem('auth_token'); currentUser=null; updateNavbar(); showAuthGate(); }
-document.getElementById('auth-modal').addEventListener('click', e=>{ if(e.target===document.getElementById('auth-modal')) closeAuth(); });
-document.getElementById('auth-password').addEventListener('keydown', e=>{ if(e.key==='Enter') submitAuth(); });
-
-// ── App 区域显示逻辑 ──────────────────────────────────────────
-function showAuthGate() { document.getElementById('authGate').style.display='block'; document.getElementById('appContent').style.display='none'; }
-function showApp() { document.getElementById('authGate').style.display='none'; document.getElementById('appContent').style.display='block'; loadDocuments(); loadStats(); updateUsageBar(); }
+function showAuthErr(msg){const e=document.getElementById('auth-error');e.textContent=msg;e.style.display='block';}
+document.getElementById('auth-modal').addEventListener('click',e=>{if(e.target===document.getElementById('auth-modal'))closeAuth();});
+document.getElementById('auth-password').addEventListener('keydown',e=>{if(e.key==='Enter')submitAuth();});
 
 // ── Navbar ────────────────────────────────────────────────────
-function updateNavbar() {
-  const el = document.getElementById('navCtas');
-  if (currentUser) {
-    const pro = currentUser.plan==='pro' ? `<span style="background:var(--gold);color:var(--bg);font-size:.62rem;padding:2px 6px;border-radius:3px;font-weight:700;margin-left:5px">PRO</span>` : '';
-    el.innerHTML = `<span style="font-size:.82rem;color:var(--muted)">${currentUser.email.split('@')[0]}${pro}</span><button class="btn-ghost-nav" onclick="logout()">退出</button>`;
+function updateNavbar(user) {
+  const el=document.getElementById('navCtas');
+  if(user){
+    const pro=user.plan==='pro'?`<span style="background:var(--gold);color:var(--bg);font-size:.62rem;padding:2px 6px;border-radius:3px;font-weight:700;margin-left:5px">PRO</span>`:'';
+    el.innerHTML=`<span style="font-size:.82rem;color:var(--muted)">${user.email.split('@')[0]}${pro}</span>
+      <a href="/app" class="btn-gold">进入工作台 →</a>`;
+    const heroBtn=document.getElementById('heroPrimaryBtn');
+    if(heroBtn){heroBtn.textContent='进入工作台 →';}
+    const ctaBtn=document.getElementById('ctaBtn');
+    if(ctaBtn){ctaBtn.textContent='进入工作台 →';}
   } else {
-    el.innerHTML = `<button class="btn-ghost-nav" onclick="openAuth('login')">登录</button><button class="btn-gold" onclick="openAuth('register')">免费注册</button>`;
+    el.innerHTML=`<button class="btn-ghost-nav" onclick="openAuth('login')">登录</button><button class="btn-gold" onclick="openAuth('register')">免费注册</button>`;
   }
 }
 
-// ── 用量栏 ────────────────────────────────────────────────────
-function updateUsageBar() {
-  if (!currentUser) return;
-  const bar = document.getElementById('usageBar');
-  if (currentUser.plan==='pro') {
-    bar.innerHTML=`<span style="font-size:.82rem;color:var(--gold)">✦ 专业版 · 无限使用</span>`;
-  } else {
-    const pdfUsed=currentUser.pdf_count||0, qUsed=currentUser.query_count_today||0;
-    const warn = pdfUsed>=4||qUsed>=16;
-    bar.innerHTML=`<div style="font-size:.82rem;color:var(--muted)">
-      PDF: <strong style="color:${pdfUsed>=5?'#f87171':'var(--fg)'}">${pdfUsed}/5</strong>
-      <span style="margin:0 10px;opacity:.3">|</span>
-      今日提问: <strong style="color:${qUsed>=20?'#f87171':'var(--fg)'}">${qUsed}/20</strong>
-      <span style="font-size:.7rem;margin-left:6px;background:rgba(255,255,255,.07);padding:2px 7px;border-radius:3px">免费版</span>
-    </div>
-    ${warn?`<button onclick="openPayment('pro')" class="btn-plan-primary" style="padding:6px 16px;border-radius:5px;font-size:.78rem;border:none;cursor:pointer">升级专业版</button>`:''}`;
-  }
-}
-
-// ── 初始化认证状态 ────────────────────────────────────────────
-async function checkAuth() {
-  const tok = localStorage.getItem('auth_token');
-  if (!tok) { showAuthGate(); updateNavbar(); return; }
-  try {
-    const res = await fetch(`${API}/api/auth/me`, { headers: { 'Authorization': `Bearer ${tok}` } });
-    if (!res.ok) { localStorage.removeItem('auth_token'); showAuthGate(); updateNavbar(); return; }
-    currentUser = await res.json();
-    updateNavbar(); showApp();
-  } catch { showAuthGate(); updateNavbar(); }
-}
-
-// ── 支付弹窗 ──────────────────────────────────────────────────
-const PAY_INFO = {
-  pro:        { name:'专业版', price:'¥99/月', wechat:'#', alipay:'#' },
-  enterprise: { name:'机构版', price:'¥499/月', wechat:'#', alipay:'#' },
+// ── Payment modal ─────────────────────────────────────────────
+const PAY_INFO={
+  pro:{name:'专业版',price:'¥99/月',wechat:'#',alipay:'#'},
+  enterprise:{name:'机构版',price:'¥499/月',wechat:'#',alipay:'#'},
 };
-function openPayment(plan) {
-  const info = PAY_INFO[plan] || PAY_INFO.pro;
-  document.getElementById('pay-plan-name').textContent = info.name;
-  document.getElementById('pay-price').textContent = info.price;
-  document.getElementById('pay-wechat').href = info.wechat;
-  document.getElementById('pay-alipay').href = info.alipay;
+function openPayment(plan){
+  const info=PAY_INFO[plan]||PAY_INFO.pro;
+  document.getElementById('pay-plan-name').textContent=info.name;
+  document.getElementById('pay-price').textContent=info.price;
+  document.getElementById('pay-wechat').href=info.wechat;
+  document.getElementById('pay-alipay').href=info.alipay;
   document.getElementById('pay-modal').classList.add('show');
 }
-function closePayment() { document.getElementById('pay-modal').classList.remove('show'); }
-document.getElementById('pay-modal').addEventListener('click', e => {
-  if (e.target === document.getElementById('pay-modal')) closePayment();
-});
+function closePayment(){document.getElementById('pay-modal').classList.remove('show');}
+document.getElementById('pay-modal').addEventListener('click',e=>{if(e.target===document.getElementById('pay-modal'))closePayment();});
 
-// ── 进入 App 区域显示输入栏 ────────────────────────────────────
-const appSection = document.getElementById('app');
-const qaBar      = document.getElementById('qaBar');
-new IntersectionObserver(entries => {
-  if (entries[0].isIntersecting && currentUser) qaBar.style.display='block';
-  else qaBar.style.display='none';
-}, { threshold: 0.05 }).observe(appSection);
+function toggleFaq(btn){btn.closest('.faq-item').classList.toggle('open');}
 
-// ── 滚动 ──────────────────────────────────────────────────────
-function scrollToBottom() {
-  requestAnimationFrame(() => document.getElementById('chatBottom').scrollIntoView({ block:'end' }));
-}
-
-// ── 历史 ──────────────────────────────────────────────────────
-function loadHistory() { try { return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]'); } catch { return []; } }
-function saveHistory(h) { localStorage.setItem(HISTORY_KEY, JSON.stringify(h.slice(-100))); }
-function clearHistory() {
-  if (!confirm('确认清空所有对话历史？')) return;
-  localStorage.removeItem(HISTORY_KEY);
-  document.getElementById('chatHistory').innerHTML =
-    '<div class="chat-empty" id="emptyTip">暂无对话记录 — 在下方输入问题或点击章节按钮开始</div>';
-}
-function formatTime(iso) {
-  return new Date(iso).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
-}
-function renderHistory() {
-  const h = loadHistory(); if (!h.length) return;
-  for (const item of h) appendQA(item.question, item.answer, item.sources, item.time, item.section||'');
-  scrollToBottom();
-}
-function msgActionsHtml(text, question, sec) {
-  const q64  = btoa(unescape(encodeURIComponent(question)));
-  const s64  = btoa(unescape(encodeURIComponent(sec||'')));
-  return `<div class="msg-actions">
-    <button class="msg-act-btn" onclick="copyBubble(this,'${btoa(unescape(encodeURIComponent(text)))}')">📋 复制</button>
-    <button class="msg-act-btn" onclick="regenMsg('${q64}','${s64}')">🔄 重新生成</button>
-  </div>`;
-}
-function copyBubble(btn, b64) {
-  const text = decodeURIComponent(escape(atob(b64)));
-  navigator.clipboard.writeText(text).then(() => {
-    btn.textContent='✅ 已复制'; btn.classList.add('copied');
-    setTimeout(()=>{ btn.textContent='📋 复制'; btn.classList.remove('copied'); }, 1800);
-  });
-}
-function regenMsg(q64, s64) {
-  const q = decodeURIComponent(escape(atob(q64)));
-  const s = decodeURIComponent(escape(atob(s64)));
-  if (s) setSection(s);
-  askQuestion(q);
-}
-
-function appendQA(q, answer, sources, time, sec) {
-  const box = document.getElementById('chatHistory');
-  const tip = document.getElementById('emptyTip'); if(tip) tip.remove();
-  const qEl = document.createElement('div'); qEl.className='msg-group';
-  qEl.innerHTML=`<div class="msg-q">
-    ${sec?`<div class="msg-section-tag">📌 ${esc(sec)}</div>`:''}
-    <div class="bubble">${esc(q)}</div>
-    <div class="msg-time">${formatTime(time)}</div></div>`;
-  box.appendChild(qEl);
-  const aEl = document.createElement('div'); aEl.className='msg-group';
-  const srcHtml = (sources&&sources.length)
-    ? `<div class="msg-sources">${sources.map(s=>`<span class="src-tag" title="${(s.score*100).toFixed(0)}%相关${s.section?' · '+s.section:''}">${esc(s.filename)}</span>`).join('')}</div>`:'';
-  aEl.innerHTML=`<div class="msg-a">
-    <div class="bubble">${esc(answer)}</div>${srcHtml}
-    ${msgActionsHtml(answer, q, sec)}
-    <div class="msg-time">${formatTime(time)}</div></div>`;
-  box.appendChild(aEl);
-}
-
-// ── 章节 ──────────────────────────────────────────────────────
-function setSection(sec) {
-  activeSection = sec;
-  document.getElementById('sectionHintName').textContent = sec;
-  document.getElementById('sectionHint').classList.toggle('show', !!sec);
-  document.getElementById('questionInput').placeholder = sec
-    ? `针对【${sec}】提问，或直接发送让 AI 解读该节…`
-    : '输入问题，Enter 发送；Shift+Enter 换行；或点击章节按钮定向解读…';
-  document.querySelectorAll('.abtn-section').forEach(b => b.classList.toggle('active', b.dataset.section===sec));
-}
-function clearSection() { setSection(''); }
-async function askSectionSummary(sec) {
-  setSection(sec);
-  await askQuestion(`请详细解读这篇论文的【${sec}】部分，提炼核心内容和要点。`);
-}
-
-// ── 文档列表 ──────────────────────────────────────────────────
-async function loadDocuments() {
-  try {
-    const docs = await (await authFetch(`${API}/api/documents`)).json();
-    allDocs = docs;
-    for (const id of [...selectedDocs]) if (!docs.find(d=>d.doc_id===id)) selectedDocs.delete(id);
-    const list = document.getElementById('docList');
-    if (!docs.length) { list.innerHTML='<li class="empty-msg">暂无文档，请先上传 PDF</li>'; updateSelectTip(); return; }
-    list.innerHTML = docs.map(d => {
-      const checked = selectedDocs.has(d.doc_id)?'checked':'';
-      const isReady = d.status==='ready';
-      return `<li class="doc-item" id="doc-${d.doc_id}">
-        <div class="doc-main">
-          <input type="checkbox" class="doc-check" data-id="${d.doc_id}"
-                 ${checked} ${isReady?'':'disabled'} onchange="toggleDoc('${d.doc_id}',this.checked)">
-          <div class="doc-info">
-            <div class="doc-name" title="${esc(d.filename)}">${esc(d.filename)}</div>
-            <div class="doc-meta">${d.size_mb} MB · ${d.pages||'-'} 页 · ${d.chunks||0} 块</div>
-          </div>
-          <div class="doc-actions">
-            <span class="badge badge-${d.status}">${statusLabel(d.status)}</span>
-            ${isReady?`<button class="abtn abtn-ghost" style="font-size:.77rem;padding:3px 10px"
-                       onclick="toggleSectionPanel('${d.doc_id}')">📖 章节</button>`:''}
-            <button class="abtn abtn-danger" onclick="deleteDoc('${d.doc_id}','${escA(d.filename)}')">删除</button>
-          </div>
-        </div>
-        <div class="section-panel" id="sp-${d.doc_id}">
-          <div class="section-label-sm">点击章节按钮定向解读 ↓</div>
-          <div class="section-tags" id="st-${d.doc_id}"><span style="font-size:.78rem;color:var(--muted)">加载中…</span></div>
-        </div>
-      </li>`;
-    }).join('');
-    updateSelectTip();
-  } catch(e) { document.getElementById('docList').innerHTML=`<li class="empty-msg">加载失败：${e.message}</li>`; }
-}
-
-async function toggleSectionPanel(docId) {
-  const panel = document.getElementById(`sp-${docId}`);
-  if (panel.classList.contains('open')) { panel.classList.remove('open'); return; }
-  panel.classList.add('open');
-  if (!selectedDocs.has(docId)) {
-    selectedDocs.add(docId);
-    const cb = document.querySelector(`[data-id="${docId}"]`); if(cb) cb.checked=true;
-    updateSelectTip();
-  }
-  const tagsEl = document.getElementById(`st-${docId}`);
-  try {
-    const data = await (await authFetch(`${API}/api/documents/${docId}/sections`)).json();
-    if (!data.sections.length) { tagsEl.textContent='未检测到章节结构'; return; }
-    tagsEl.innerHTML = data.sections.map(sec=>
-      `<button class="abtn-section" data-section="${esc(sec)}" onclick="askSectionSummary('${escA(sec)}')">${esc(sec)}</button>`
-    ).join('');
-  } catch { tagsEl.textContent='章节加载失败'; }
-}
-function toggleDoc(docId, checked) { if(checked) selectedDocs.add(docId); else selectedDocs.delete(docId); updateSelectTip(); }
-function toggleSelectAll() {
-  const ids = allDocs.filter(d=>d.status==='ready').map(d=>d.doc_id);
-  const all = ids.every(id=>selectedDocs.has(id));
-  ids.forEach(id => all?selectedDocs.delete(id):selectedDocs.add(id));
-  document.querySelectorAll('.doc-check').forEach(cb=>{ cb.checked=selectedDocs.has(cb.dataset.id); });
-  updateSelectTip();
-}
-function updateSelectTip() {
-  document.getElementById('selectTip').innerHTML = selectedDocs.size===0
-    ? '查询范围：全部文档' : `查询范围：已选 <strong>${selectedDocs.size}</strong> 篇`;
-}
-function statusLabel(s) { return{ready:'就绪',processing:'处理中',pending:'等待中',error:'错误'}[s]||s; }
-function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-function escA(s) { return String(s).replace(/'/g,"\\'"); }
-async function deleteDoc(docId, name) {
-  if (!confirm(`确认删除「${name}」？`)) return;
-  await authFetch(`${API}/api/documents/${docId}`,{method:'DELETE'});
-  selectedDocs.delete(docId); loadDocuments(); loadStats();
-}
-
-// ── 上传 ──────────────────────────────────────────────────────
-function xhrUpload(file, onProgress) {
-  return new Promise((resolve, reject) => {
-    const xhr  = new XMLHttpRequest();
-    const form = new FormData();
-    form.append('file', file);
-    xhr.upload.onprogress = e => {
-      if (e.lengthComputable) onProgress(Math.round(e.loaded / e.total * 100));
-    };
-    xhr.onload = () => {
-      try { const d = JSON.parse(xhr.responseText); xhr.status < 300 ? resolve(d) : reject(d); }
-      catch { reject({ detail: '解析响应失败' }); }
-    };
-    xhr.onerror = () => reject({ detail: '网络错误' });
-    const tok = localStorage.getItem('auth_token');
-    xhr.open('POST', `${API}/api/upload`);
-    if (tok) xhr.setRequestHeader('Authorization', `Bearer ${tok}`);
-    xhr.send(form);
-  });
-}
-
-document.getElementById('fileInput').addEventListener('change', async e => {
-  const files=[...e.target.files]; if(!files.length) return;
-  const statusEl = document.getElementById('uploadStatus');
-  const fileStates = files.map(f => ({ name: f.name, state: 'pending', pct: 0 }));
-
-  function renderUploadList() {
-    const doneCount = fileStates.filter(f=>f.state==='ok'||f.state==='err').length;
-    const allDone   = doneCount === files.length;
-    const lines = fileStates.map(f => {
-      const icon = f.state==='pending'?'<span style="color:var(--muted)">⏸</span>'
-                 : f.state==='ok'?'<span style="color:#4ade80">✅</span>'
-                 : f.state==='err'?'<span style="color:#f87171">❌</span>':'';
-      const bar = f.state==='uploading'
-        ? `<div class="upload-progress-wrap">
-             <div class="upload-progress-bar"><div class="upload-progress-fill" style="width:${f.pct}%"></div></div>
-             <span class="upload-progress-pct">${f.pct}%</span>
-           </div>` : '';
-      return `<div style="font-size:.82rem;padding:3px 0">${icon} ${esc(f.name)}${bar}</div>`;
-    }).join('');
-    const summary = allDone
-      ? `<div style="margin-top:8px;font-size:.82rem;color:var(--gold)">✦ 全部 ${files.length} 个文件上传完毕，后台处理中…</div>`
-      : `<div style="font-size:.75rem;color:var(--muted);margin-top:6px">${doneCount}/${files.length} 已完成</div>`;
-    statusEl.innerHTML = lines + summary;
-  }
-
-  renderUploadList();
-  for (let i = 0; i < files.length; i++) {
-    fileStates[i].state = 'uploading'; renderUploadList();
-    try {
-      const d = await xhrUpload(files[i], pct => { fileStates[i].pct = pct; renderUploadList(); });
-      fileStates[i].state = 'ok'; fileStates[i].pct = 100;
-      pollStatus(d.doc_id);
-    } catch(err) {
-      fileStates[i].state = 'err';
-      fileStates[i].name += `（${err.detail||'失败'}）`;
-    }
-    renderUploadList();
-  }
-  e.target.value = ''; loadDocuments(); updateUsageBar();
-});
-async function pollStatus(docId){
-  const iv=setInterval(async()=>{
-    try{const r=await authFetch(`${API}/api/documents/${docId}/status`);const d=await r.json();
-      if(d.status==='ready'||d.status==='error'){clearInterval(iv);loadDocuments();loadStats();}}
-    catch{clearInterval(iv);}
-  },3000);
-}
-async function loadStats(){
-  try{const r=await authFetch(`${API}/api/stats`);const d=await r.json();
-    document.getElementById('statsBar').textContent=`知识库共 ${d.total_vectors} 个向量块`;}catch{}
-}
-
-// ── 问答 ──────────────────────────────────────────────────────
-function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();askQuestion();}}
-async function askQuestion(overrideQ){
-  if(isAsking)return;
-  const input=document.getElementById('questionInput');
-  let q=overrideQ||input.value.trim();
-  if(!q){if(activeSection){await askQuestion(`请详细解读这篇论文的【${activeSection}】部分，提炼核心内容和要点。`);return;}return;}
-  isAsking=true; document.getElementById('sendBtn').disabled=true;
-  if(!overrideQ) input.value='';
-  const now=new Date().toISOString(); const sec=activeSection;
-  const box=document.getElementById('chatHistory');
-  const tip=document.getElementById('emptyTip'); if(tip)tip.remove();
-  const qEl=document.createElement('div'); qEl.className='msg-group';
-  qEl.innerHTML=`<div class="msg-q">${sec?`<div class="msg-section-tag">📌 ${esc(sec)}</div>`:''}
-    <div class="bubble">${esc(q)}</div><div class="msg-time">${formatTime(now)}</div></div>`;
-  box.appendChild(qEl); scrollToBottom();
-  const aEl=document.createElement('div'); aEl.className='msg-group';
-  const aMsgDiv=document.createElement('div'); aMsgDiv.className='msg-a';
-  const bubble=document.createElement('div'); bubble.className='bubble streaming';
-  bubble.innerHTML=`<span class="thinking"><span></span><span></span><span></span></span>`;
-  const srcEl=document.createElement('div'); srcEl.className='msg-sources';
-  const timeEl=document.createElement('div'); timeEl.className='msg-time'; timeEl.textContent=formatTime(now);
-  aMsgDiv.append(bubble,srcEl,timeEl); aEl.appendChild(aMsgDiv); box.appendChild(aEl); scrollToBottom();
-  let fullText='',finalSources=[],rafPending=false;
+// ── Init ─────────────────────────────────────────────────────
+(async()=>{
+  const tok=localStorage.getItem('auth_token');
+  if(!tok){updateNavbar(null);return;}
   try{
-    const body={question:q,doc_ids:selectedDocs.size>0?[...selectedDocs]:[],section:sec};
-    const res=await authFetch(`${API}/api/ask/stream`,{method:'POST',
-      headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    if(!res.ok) throw new Error(`HTTP ${res.status}`);
-    const reader=res.body.getReader(),decoder=new TextDecoder();
-    bubble.textContent='';
-    while(true){
-      const{done,value}=await reader.read(); if(done)break;
-      for(const line of decoder.decode(value).split('\n')){
-        if(!line.startsWith('data: '))continue;
-        const raw=line.slice(6).trim(); if(raw==='[DONE]')break;
-        try{
-          const obj=JSON.parse(raw);
-          if(obj.type==='text'){
-            fullText+=obj.text; bubble.textContent=fullText;
-            if(!rafPending){rafPending=true;requestAnimationFrame(()=>{scrollToBottom();rafPending=false;});}
-          }else if(obj.type==='sources'&&obj.sources.length){
-            finalSources=obj.sources;
-            srcEl.innerHTML=finalSources.map(s=>`<span class="src-tag" title="${(s.score*100).toFixed(0)}%相关${s.section?' · '+s.section:''}">${esc(s.filename)}</span>`).join('');
-          }
-        }catch{}
-      }
-    }
-    bubble.classList.remove('streaming');
-    aMsgDiv.insertBefore(
-      Object.assign(document.createElement('div'), {innerHTML: msgActionsHtml(fullText, q, sec)}).firstElementChild,
-      srcEl
-    );
-    scrollToBottom();
-    const history=loadHistory();
-    history.push({question:q,answer:fullText,sources:finalSources,time:now,section:sec});
-    saveHistory(history);
-  }catch(err){
-    bubble.textContent=`❌ 请求失败：${err.message}`; bubble.classList.remove('streaming');
-  }finally{
-    isAsking=false; document.getElementById('sendBtn').disabled=false;
-    document.getElementById('questionInput').focus();
-  }
-}
-// ── 生成综述 ──────────────────────────────────────────────────
-function generateReview() {
-  if (selectedDocs.size === 0) {
-    alert('请先在文档库中勾选需要综述的文献'); return;
-  }
-  const q = `请基于以上选中的 ${selectedDocs.size} 篇文献，撰写一篇学术文献综述`;
-  document.getElementById('questionInput').value = q;
-  document.querySelector('#app').scrollIntoView({behavior:'smooth'});
-  setTimeout(() => askQuestion(q), 400);
-}
-
-function toggleFaq(btn){ btn.closest('.faq-item').classList.toggle('open'); }
-
-// ── 初始化 ────────────────────────────────────────────────────
-renderHistory();
-checkAuth();
-setInterval(()=>{ if(currentUser) loadDocuments(); }, 10000);
+    const res=await fetch(`${API}/api/auth/me`,{headers:{'Authorization':`Bearer ${tok}`}});
+    if(!res.ok){localStorage.removeItem('auth_token');updateNavbar(null);return;}
+    const user=await res.json();
+    updateNavbar(user);
+  }catch{updateNavbar(null);}
+})();
 </script>
 </body>
 </html>

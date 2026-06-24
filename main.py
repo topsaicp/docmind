@@ -28,6 +28,10 @@ app.mount("/static", StaticFiles(directory=str(frontend_dir)), name="static")
 def root():
     return FileResponse(str(frontend_dir / "index.html"))
 
+@app.get("/app")
+def app_page():
+    return FileResponse(str(frontend_dir / "app.html"))
+
 @app.get("/health")
 def health():
     return {"status": "ok"}

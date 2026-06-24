@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DocMind · 工作台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Noto+Sans+SC:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#09090f;--card:#111118;--gold:#c9a84c;--fg:#e8e4d8;
+  --muted:#7c7a72;--border:rgba(255,255,255,0.08);--border-gold:rgba(201,168,76,0.25);
+  --panel:#0d0d14;--sidebar-w:320px;--nav-h:56px;--bar-h:72px;
+}
+html,body{height:100%;overflow:hidden;font-family:'Noto Sans SC','PingFang SC',sans-serif;
+  background:var(--bg);color:var(--fg);font-size:14px;line-height:1.6}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;outline:none;background:none}
+input,textarea{font-family:inherit}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px}
+
+/* ── Navbar ── */
+#nav{position:fixed;top:0;left:0;right:0;height:var(--nav-h);z-index:100;
+  background:rgba(9,9,15,.92);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;padding:0 20px;gap:16px}
+.nav-brand{display:flex;align-items:center;gap:8px;text-decoration:none}
+.nav-brand-icon{width:26px;height:26px;background:var(--gold);border-radius:4px;
+  display:flex;align-items:center;justify-content:center;font-size:13px}
+.nav-brand-name{font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--fg)}
+.nav-back{font-size:.78rem;color:var(--muted);padding:4px 10px;border-radius:4px;
+  border:1px solid var(--border);transition:all .2s}
+.nav-back:hover{color:var(--fg);border-color:rgba(255,255,255,.2)}
+.nav-right{display:flex;align-items:center;gap:10px}
+.nav-user{font-size:.8rem;color:var(--muted)}
+.nav-plan{font-size:.62rem;background:var(--gold);color:var(--bg);
+  padding:2px 6px;border-radius:3px;font-weight:700;margin-left:4px}
+.nav-btn{font-size:.8rem;color:var(--muted);padding:5px 12px;border-radius:4px;
+  border:1px solid var(--border);transition:all .2s}
+.nav-btn:hover{color:var(--fg);border-color:rgba(255,255,255,.2)}
+
+/* ── Workspace layout ── */
+.workspace{
+  display:grid;
+  grid-template-columns:var(--sidebar-w) 1fr;
+  height:calc(100vh - var(--nav-h) - var(--bar-h));
+  margin-top:var(--nav-h);
+  overflow:hidden;
+}
+
+/* ── Left panel ── */
+.left-panel{
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  overflow:hidden;background:var(--panel);
+}
+.left-scroll{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
+.panel-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px}
+.panel-card-title{font-size:.75rem;font-weight:600;color:var(--fg);margin-bottom:10px;
+  display:flex;align-items:center;justify-content:space-between}
+
+/* Usage bar */
+.usage-bar{padding:10px 14px;border-bottom:1px solid var(--border);
+  font-size:.75rem;color:var(--muted);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+
+/* Upload zone */
+.upload-zone{border:1px dashed var(--border);border-radius:6px;padding:14px;
+  text-align:center;cursor:pointer;transition:border-color .2s}
+.upload-zone:hover{border-color:rgba(201,168,76,.4)}
+.upload-zone input{display:none}
+.upload-icon{font-size:1.4rem;margin-bottom:4px}
+.upload-main{font-size:.78rem;color:var(--fg)}
+.upload-hint{font-size:.7rem;color:var(--muted);margin-top:2px}
+#uploadStatus{font-size:.78rem;margin-top:8px}
+
+/* Upload progress */
+.upload-progress-wrap{display:flex;align-items:center;gap:6px;margin-top:3px}
+.upload-progress-bar{flex:1;height:3px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden}
+.upload-progress-fill{height:100%;background:var(--gold);border-radius:2px;transition:width .2s}
+.upload-progress-pct{font-size:.68rem;color:var(--gold);min-width:26px}
+
+/* Doc list */
+.doc-list{list-style:none;display:flex;flex-direction:column;gap:6px}
+.doc-item{background:rgba(255,255,255,.03);border:1px solid var(--border);
+  border-radius:6px;padding:10px 12px}
+.doc-main{display:flex;align-items:flex-start;gap:8px}
+.doc-check{width:14px;height:14px;cursor:pointer;accent-color:var(--gold);flex-shrink:0;margin-top:2px}
+.doc-info{flex:1;min-width:0}
+.doc-name{font-size:.78rem;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default}
+.doc-meta{font-size:.68rem;color:var(--muted);margin-top:1px}
+.doc-actions{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.badge{font-size:.62rem;padding:2px 6px;border-radius:3px;font-weight:600}
+.badge-ready{background:rgba(74,222,128,.12);color:#4ade80}
+.badge-processing,.badge-pending{background:rgba(251,191,36,.1);color:#fbbf24}
+.badge-error{background:rgba(248,113,113,.12);color:#f87171}
+.abtn{border-radius:4px;font-size:.72rem;padding:3px 8px;transition:all .15s}
+.abtn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.abtn-ghost:hover{border-color:rgba(255,255,255,.2);color:var(--fg)}
+.abtn-danger{background:transparent;border:1px solid rgba(248,113,113,.2);color:#f87171}
+.abtn-danger:hover{background:rgba(248,113,113,.08)}
+.abtn-gold{background:var(--gold);color:var(--bg);border:none;font-weight:600}
+.abtn-gold:hover{opacity:.88}
+.empty-msg{font-size:.78rem;color:var(--muted);text-align:center;padding:16px 0}
+.stats-tip{font-size:.68rem;color:var(--muted);text-align:center;padding:6px 0}
+.select-bar{display:flex;align-items:center;justify-content:space-between;
+  font-size:.72rem;color:var(--muted);margin-bottom:8px}
+
+/* Section panel */
+.section-panel{display:none;padding:8px 0 2px}
+.section-panel.open{display:block}
+.section-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.abtn-section{background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.2);
+  color:var(--gold);border-radius:4px;font-size:.68rem;padding:3px 8px;cursor:pointer;transition:all .15s}
+.abtn-section:hover,.abtn-section.active{background:rgba(201,168,76,.18)}
+.section-label-sm{font-size:.68rem;color:var(--muted)}
+
+/* ── Right panel ── */
+.right-panel{display:flex;flex-direction:column;overflow:hidden}
+.chat-header{display:flex;align-items:center;justify-content:space-between;
+  padding:12px 20px;border-bottom:1px solid var(--border);flex-shrink:0}
+.chat-header-title{font-size:.85rem;font-weight:600;color:var(--fg)}
+.chat-header-actions{display:flex;gap:6px}
+.chat-area{flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:0}
+.chat-empty{text-align:center;color:var(--muted);font-size:.82rem;margin:40px 0}
+
+/* Msg bubbles */
+.msg-group{margin-bottom:16px}
+.msg-q,.msg-a{display:flex;flex-direction:column}
+.msg-q{align-items:flex-end}
+.msg-a{align-items:flex-start}
+.bubble{padding:10px 15px;border-radius:14px;font-size:.88rem;line-height:1.8;
+  word-break:break-word;white-space:pre-wrap;max-width:85%}
+.msg-q .bubble{background:var(--gold);color:var(--bg);border-radius:14px 14px 3px 14px;font-weight:500}
+.msg-a .bubble{background:rgba(255,255,255,.04);color:var(--fg);
+  border:1px solid var(--border);border-radius:14px 14px 14px 3px}
+.msg-a .bubble.streaming{border-color:rgba(201,168,76,.3)}
+.msg-section-tag{display:inline-block;background:rgba(201,168,76,.12);color:var(--gold);
+  border-radius:4px;padding:1px 8px;font-size:.7rem;margin-bottom:4px}
+.msg-sources{margin-top:5px;display:flex;flex-wrap:wrap;gap:4px}
+.src-tag{background:rgba(201,168,76,.08);color:var(--gold);border-radius:4px;
+  padding:2px 7px;font-size:.7rem;border:1px solid rgba(201,168,76,.2)}
+.msg-time{font-size:.66rem;color:rgba(255,255,255,.2);margin-top:3px}
+.msg-a .msg-time{text-align:left}
+.msg-q .msg-time{text-align:right}
+.thinking{display:inline-flex;gap:4px;align-items:center}
+.thinking span{width:5px;height:5px;background:var(--muted);border-radius:50%;animation:bounce 1.2s infinite}
+.thinking span:nth-child(2){animation-delay:.2s}
+.thinking span:nth-child(3){animation-delay:.4s}
+@keyframes bounce{0%,80%,100%{transform:scale(.7);opacity:.4}40%{transform:scale(1);opacity:1}}
+.msg-actions{display:flex;gap:5px;margin-top:4px}
+.msg-act-btn{background:transparent;border:1px solid var(--border);color:var(--muted);
+  font-size:.68rem;padding:2px 8px;border-radius:4px;cursor:pointer;transition:all .15s}
+.msg-act-btn:hover{border-color:rgba(201,168,76,.4);color:var(--gold)}
+.msg-act-btn.copied{color:#4ade80;border-color:#4ade80}
+
+/* ── Fixed input bar ── */
+.qa-bar{position:fixed;bottom:0;left:0;right:0;height:var(--bar-h);z-index:200;
+  background:rgba(9,9,15,.95);backdrop-filter:blur(12px);
+  border-top:1px solid var(--border)}
+.qa-bar-inner{height:100%;max-width:100%;padding:10px 20px 10px calc(var(--sidebar-w) + 20px);
+  display:flex;flex-direction:column;gap:4px}
+.qa-section-hint{display:none;align-items:center;gap:6px;font-size:.72rem;color:var(--gold)}
+.qa-section-hint.show{display:flex}
+.qa-section-hint button{background:none;border:none;cursor:pointer;color:var(--muted);font-size:.9rem}
+.qa-row{display:flex;gap:8px;align-items:flex-end;flex:1}
+.qa-row textarea{flex:1;background:rgba(255,255,255,.05);border:1px solid var(--border);
+  border-radius:7px;padding:8px 13px;font-size:.88rem;color:var(--fg);resize:none;
+  outline:none;max-height:80px;line-height:1.5;transition:border-color .2s}
+.qa-row textarea:focus{border-color:rgba(201,168,76,.4)}
+.qa-row textarea::placeholder{color:var(--muted)}
+.qa-send{background:var(--gold);color:var(--bg);font-size:.82rem;font-weight:600;
+  padding:8px 18px;border-radius:6px;transition:opacity .2s;white-space:nowrap}
+.qa-send:hover{opacity:.88}
+.qa-send:disabled{opacity:.4}
+
+/* Auth modal */
+#auth-modal{display:none;position:fixed;inset:0;z-index:500;
+  background:rgba(0,0,0,.8);backdrop-filter:blur(6px);
+  align-items:center;justify-content:center}
+#auth-modal.show{display:flex}
+.auth-box{background:var(--card);border:1px solid var(--border-gold);border-radius:12px;
+  padding:32px;max-width:380px;width:90%;position:relative}
+.auth-input{width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);
+  border-radius:7px;padding:10px 13px;font-size:.88rem;color:var(--fg);
+  outline:none;transition:border-color .2s}
+.auth-input:focus{border-color:rgba(201,168,76,.45)}
+.auth-input::placeholder{color:var(--muted)}
+.auth-tab{flex:1;background:transparent;border:none;padding:8px 0;font-size:.85rem;
+  color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+.auth-tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+.btn-submit{width:100%;background:var(--gold);color:var(--bg);font-size:.88rem;font-weight:600;
+  padding:11px;border-radius:7px;cursor:pointer;transition:opacity .2s;border:none}
+.btn-submit:hover{opacity:.88}
+.btn-submit:disabled{opacity:.4}
+
+@media(max-width:768px){
+  :root{--sidebar-w:100%}
+  .workspace{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+  .left-panel{max-height:40vh}
+  .qa-bar-inner{padding:10px 16px}
+}
+</style>
+</head>
+<body>
+
+<!-- ── Navbar ── -->
+<nav id="nav">
+  <div style="display:flex;align-items:center;gap:14px">
+    <a href="/" class="nav-brand">
+      <div class="nav-brand-icon">📚</div>
+      <span class="nav-brand-name">DocMind</span>
+    </a>
+    <a href="/" class="nav-back">← 返回首页</a>
+  </div>
+  <div class="nav-right" id="navRight">
+    <span class="nav-user" id="navUser">加载中…</span>
+    <button class="nav-btn" onclick="logout()">退出</button>
+  </div>
+</nav>
+
+<!-- ── Auth modal ── -->
+<div id="auth-modal">
+  <div class="auth-box">
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:1.5rem;margin-bottom:6px">📚</div>
+      <div style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700">请先登录</div>
+      <div style="font-size:.75rem;color:var(--muted);margin-top:4px">登录后使用 DocMind 工作台</div>
+    </div>
+    <div style="display:flex;border-bottom:1px solid var(--border);margin-bottom:18px">
+      <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">登录</button>
+      <button class="auth-tab" id="tab-register" onclick="switchTab('register')">注册</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <input class="auth-input" type="email" id="auth-email" placeholder="邮箱地址" autocomplete="email">
+      <input class="auth-input" type="password" id="auth-password" placeholder="密码（至少6位）">
+      <div id="auth-error" style="display:none;color:#f87171;font-size:.75rem;padding:7px 10px;background:rgba(248,113,113,.08);border-radius:5px"></div>
+      <button class="btn-submit" id="auth-submit" onclick="submitAuth()">登录</button>
+    </div>
+    <p style="text-align:center;font-size:.75rem;color:var(--muted);margin-top:12px">
+      <span id="auth-switch-hint">没有账号？</span>
+      <a id="auth-switch-link" style="color:var(--gold);cursor:pointer" onclick="switchTab('register')">免费注册</a>
+    </p>
+  </div>
+</div>
+
+<!-- ── Workspace ── -->
+<div class="workspace">
+
+  <!-- Left panel -->
+  <div class="left-panel">
+    <div class="usage-bar" id="usageBar">加载中…</div>
+    <div class="left-scroll">
+
+      <!-- Upload -->
+      <div class="panel-card">
+        <div class="panel-card-title">上传 PDF</div>
+        <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+          <input type="file" id="fileInput" accept=".pdf" multiple>
+          <div class="upload-icon">📄</div>
+          <div class="upload-main">点击选择 PDF 文件</div>
+          <div class="upload-hint">支持多文件，最大 50MB</div>
+        </div>
+        <div id="uploadStatus"></div>
+      </div>
+
+      <!-- Document library -->
+      <div class="panel-card" style="flex:1">
+        <div class="panel-card-title">
+          文档库
+          <button class="abtn abtn-ghost" onclick="toggleSelectAll()" style="font-size:.68rem">全选/取消</button>
+        </div>
+        <div class="select-bar">
+          <span id="selectTip">查询范围：全部文档</span>
+        </div>
+        <ul class="doc-list" id="docList"><li class="empty-msg">暂无文档，请先上传 PDF</li></ul>
+        <div class="stats-tip" id="statsBar"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Right panel: Chat -->
+  <div class="right-panel">
+    <div class="chat-header">
+      <span class="chat-header-title">AI 问答</span>
+      <div class="chat-header-actions">
+        <button class="abtn abtn-ghost" onclick="generateReview()" title="基于已选文献生成学术综述">📝 生成综述</button>
+        <button class="abtn abtn-ghost" onclick="clearHistory()">🗑 清空历史</button>
+      </div>
+    </div>
+    <div class="chat-area" id="chatHistory">
+      <div class="chat-empty" id="emptyTip">从左侧选择文献，在下方输入问题开始对话</div>
+    </div>
+    <div id="chatBottom"></div>
+  </div>
+
+</div>
+
+<!-- ── Fixed input bar ── -->
+<div class="qa-bar">
+  <div class="qa-bar-inner">
+    <div class="qa-section-hint" id="sectionHint">
+      <span>📌 当前章节：<strong id="sectionHintName"></strong></span>
+      <button onclick="clearSection()">✕</button>
+    </div>
+    <div class="qa-row">
+      <textarea id="questionInput" rows="2"
+        placeholder="输入问题，Enter 发送；Shift+Enter 换行；或点击章节按钮定向解读…"
+        onkeydown="handleKey(event)"></textarea>
+      <button class="qa-send" id="sendBtn" onclick="askQuestion()">发送</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '';
+const HISTORY_KEY = 'kb_chat_history_v2';
+let selectedDocs  = new Set();
+let allDocs       = [];
+let isAsking      = false;
+let activeSection = '';
+let currentUser   = null;
+let authMode      = 'login';
+
+// ── Auth helpers ──────────────────────────────────────────────
+function getAuthHeaders() {
+  const tok = localStorage.getItem('auth_token');
+  return tok ? { 'Authorization': `Bearer ${tok}` } : {};
+}
+async function authFetch(url, options = {}) {
+  const headers = { ...(options.headers || {}), ...getAuthHeaders() };
+  const res = await fetch(url, { ...options, headers });
+  if (res.status === 401) {
+    localStorage.removeItem('auth_token');
+    currentUser = null;
+    openAuth('login');
+    throw new Error('请先登录');
+  }
+  return res;
+}
+
+// ── Auth modal ────────────────────────────────────────────────
+function openAuth(mode='login') {
+  authMode = mode; switchTab(mode);
+  document.getElementById('auth-modal').classList.add('show');
+  setTimeout(()=>document.getElementById('auth-email').focus(), 80);
+}
+function closeAuth() {
+  if (!currentUser) return; // 未登录不允许关闭
+  document.getElementById('auth-modal').classList.remove('show');
+}
+function switchTab(mode) {
+  authMode = mode;
+  document.getElementById('tab-login').classList.toggle('active', mode==='login');
+  document.getElementById('tab-register').classList.toggle('active', mode==='register');
+  document.getElementById('auth-submit').textContent = mode==='login'?'登录':'注册';
+  document.getElementById('auth-switch-hint').textContent = mode==='login'?'没有账号？':'已有账号？';
+  document.getElementById('auth-switch-link').textContent = mode==='login'?'免费注册':'立即登录';
+  document.getElementById('auth-switch-link').onclick = ()=>switchTab(mode==='login'?'register':'login');
+  document.getElementById('auth-error').style.display='none';
+}
+async function submitAuth() {
+  const email = document.getElementById('auth-email').value.trim();
+  const pwd   = document.getElementById('auth-password').value;
+  const btn   = document.getElementById('auth-submit');
+  if (!email.includes('@')) { showAuthErr('请输入有效邮箱'); return; }
+  if (pwd.length < 6)       { showAuthErr('密码至少6位'); return; }
+  btn.disabled=true; btn.textContent='请稍候…';
+  try {
+    const url = authMode==='login' ? `${API}/api/auth/login` : `${API}/api/auth/register`;
+    const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'},
+                                   body:JSON.stringify({email, password:pwd}) });
+    const d = await res.json();
+    if (!res.ok) { showAuthErr(d.detail||'操作失败'); return; }
+    localStorage.setItem('auth_token', d.token);
+    currentUser = { email:d.email, plan:d.plan, pdf_count:d.pdf_count||0, query_count_today:d.query_count_today||0 };
+    document.getElementById('auth-modal').classList.remove('show');
+    updateNavbar(); updateUsageBar(); loadDocuments(); loadStats();
+  } catch(e) { showAuthErr('网络错误：'+e.message); }
+  finally { btn.disabled=false; btn.textContent=authMode==='login'?'登录':'注册'; }
+}
+function showAuthErr(msg) {
+  const e=document.getElementById('auth-error'); e.textContent=msg; e.style.display='block';
+}
+function logout() {
+  localStorage.removeItem('auth_token'); currentUser=null;
+  window.location.href='/';
+}
+document.getElementById('auth-password').addEventListener('keydown', e=>{ if(e.key==='Enter') submitAuth(); });
+
+// ── Navbar ────────────────────────────────────────────────────
+function updateNavbar() {
+  if (!currentUser) return;
+  const pro = currentUser.plan==='pro'
+    ? `<span class="nav-plan">PRO</span>` : '';
+  document.getElementById('navUser').innerHTML =
+    `${currentUser.email.split('@')[0]}${pro}`;
+}
+
+// ── Usage bar ─────────────────────────────────────────────────
+function updateUsageBar() {
+  if (!currentUser) return;
+  const bar = document.getElementById('usageBar');
+  if (currentUser.plan==='pro') {
+    bar.innerHTML = `<span style="color:var(--gold)">✦ 专业版 · 无限使用</span>`;
+  } else {
+    const p=currentUser.pdf_count||0, q=currentUser.query_count_today||0;
+    bar.innerHTML = `
+      <span>PDF <strong style="color:${p>=5?'#f87171':'var(--fg)'}">${p}/5</strong>
+        &nbsp;·&nbsp; 今日提问 <strong style="color:${q>=20?'#f87171':'var(--fg)'}">${q}/20</strong>
+        <span style="font-size:.65rem;background:rgba(255,255,255,.07);padding:1px 6px;border-radius:3px;margin-left:4px">免费版</span>
+      </span>
+      ${p>=4||q>=16?`<button onclick="window.location.href='/'" style="font-size:.7rem;background:var(--gold);color:var(--bg);border:none;padding:3px 10px;border-radius:4px;cursor:pointer;font-weight:600">升级</button>`:''}`;
+  }
+}
+
+// ── Check auth on load ────────────────────────────────────────
+async function checkAuth() {
+  const tok = localStorage.getItem('auth_token');
+  if (!tok) { openAuth('login'); return; }
+  try {
+    const res = await fetch(`${API}/api/auth/me`, { headers:{'Authorization':`Bearer ${tok}`} });
+    if (!res.ok) { localStorage.removeItem('auth_token'); openAuth('login'); return; }
+    currentUser = await res.json();
+    updateNavbar(); updateUsageBar(); loadDocuments(); loadStats(); renderHistory();
+  } catch { openAuth('login'); }
+}
+
+// ── History ───────────────────────────────────────────────────
+function loadHistory() { try { return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]'); } catch { return []; } }
+function saveHistory(h) { localStorage.setItem(HISTORY_KEY, JSON.stringify(h.slice(-100))); }
+function clearHistory() {
+  if (!confirm('确认清空所有对话历史？')) return;
+  localStorage.removeItem(HISTORY_KEY);
+  document.getElementById('chatHistory').innerHTML =
+    '<div class="chat-empty" id="emptyTip">从左侧选择文献，在下方输入问题开始对话</div>';
+}
+function formatTime(iso) {
+  return new Date(iso).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+}
+function renderHistory() {
+  const h=loadHistory(); if(!h.length) return;
+  for(const item of h) appendQA(item.question,item.answer,item.sources,item.time,item.section||'');
+  scrollToBottom();
+}
+
+// ── Message helpers ───────────────────────────────────────────
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+function escA(s){return String(s).replace(/'/g,"\\'")}
+function scrollToBottom(){requestAnimationFrame(()=>document.getElementById('chatBottom').scrollIntoView({block:'end'}))}
+
+function msgActionsHtml(text,question,sec){
+  const q64=btoa(unescape(encodeURIComponent(question)));
+  const s64=btoa(unescape(encodeURIComponent(sec||'')));
+  return `<div class="msg-actions">
+    <button class="msg-act-btn" onclick="copyBubble(this,'${btoa(unescape(encodeURIComponent(text)))}')">📋 复制</button>
+    <button class="msg-act-btn" onclick="regenMsg('${q64}','${s64}')">🔄 重新生成</button>
+  </div>`;
+}
+function copyBubble(btn,b64){
+  navigator.clipboard.writeText(decodeURIComponent(escape(atob(b64)))).then(()=>{
+    btn.textContent='✅ 已复制'; btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent='📋 复制';btn.classList.remove('copied');},1800);
+  });
+}
+function regenMsg(q64,s64){
+  const q=decodeURIComponent(escape(atob(q64)));
+  const s=decodeURIComponent(escape(atob(s64)));
+  if(s) setSection(s); askQuestion(q);
+}
+
+function appendQA(q,answer,sources,time,sec){
+  const box=document.getElementById('chatHistory');
+  const tip=document.getElementById('emptyTip'); if(tip) tip.remove();
+  const qEl=document.createElement('div'); qEl.className='msg-group';
+  qEl.innerHTML=`<div class="msg-q">${sec?`<div class="msg-section-tag">📌 ${esc(sec)}</div>`:''}
+    <div class="bubble">${esc(q)}</div><div class="msg-time">${formatTime(time)}</div></div>`;
+  box.appendChild(qEl);
+  const srcHtml=(sources&&sources.length)
+    ?`<div class="msg-sources">${sources.map(s=>`<span class="src-tag" title="${(s.score*100).toFixed(0)}%相关${s.section?' · '+s.section:''}">${esc(s.filename)}</span>`).join('')}</div>`:'';
+  const aEl=document.createElement('div'); aEl.className='msg-group';
+  aEl.innerHTML=`<div class="msg-a"><div class="bubble">${esc(answer)}</div>
+    ${msgActionsHtml(answer,q,sec)}${srcHtml}
+    <div class="msg-time">${formatTime(time)}</div></div>`;
+  box.appendChild(aEl);
+}
+
+// ── Sections ──────────────────────────────────────────────────
+function setSection(sec){
+  activeSection=sec;
+  document.getElementById('sectionHintName').textContent=sec;
+  document.getElementById('sectionHint').classList.toggle('show',!!sec);
+  document.getElementById('questionInput').placeholder=sec
+    ?`针对【${sec}】提问，或直接发送让 AI 解读该节…`
+    :'输入问题，Enter 发送；Shift+Enter 换行；或点击章节按钮定向解读…';
+  document.querySelectorAll('.abtn-section').forEach(b=>b.classList.toggle('active',b.dataset.section===sec));
+}
+function clearSection(){setSection('')}
+async function askSectionSummary(sec){
+  setSection(sec);
+  await askQuestion(`请详细解读这篇论文的【${sec}】部分，提炼核心内容和要点。`);
+}
+
+// ── Document list ─────────────────────────────────────────────
+function statusLabel(s){return{ready:'就绪',processing:'处理中',pending:'等待中',error:'错误'}[s]||s}
+
+async function loadDocuments(){
+  try{
+    const docs=await(await authFetch(`${API}/api/documents`)).json();
+    allDocs=docs;
+    for(const id of [...selectedDocs]) if(!docs.find(d=>d.doc_id===id)) selectedDocs.delete(id);
+    const list=document.getElementById('docList');
+    if(!docs.length){list.innerHTML='<li class="empty-msg">暂无文档，请先上传 PDF</li>';updateSelectTip();return;}
+    list.innerHTML=docs.map(d=>{
+      const checked=selectedDocs.has(d.doc_id)?'checked':'';
+      const isReady=d.status==='ready';
+      return `<li class="doc-item" id="doc-${d.doc_id}">
+        <div class="doc-main">
+          <input type="checkbox" class="doc-check" data-id="${d.doc_id}"
+            ${checked} ${isReady?'':'disabled'} onchange="toggleDoc('${d.doc_id}',this.checked)">
+          <div class="doc-info">
+            <div class="doc-name" title="${esc(d.filename)}">${esc(d.filename)}</div>
+            <div class="doc-meta">${d.size_mb}MB · ${d.pages||'-'}页 · ${d.chunks||0}块</div>
+          </div>
+          <div class="doc-actions">
+            <span class="badge badge-${d.status}">${statusLabel(d.status)}</span>
+            ${isReady?`<button class="abtn abtn-ghost" onclick="toggleSectionPanel('${d.doc_id}')">📖</button>`:''}
+            <button class="abtn abtn-danger" onclick="deleteDoc('${d.doc_id}','${escA(d.filename)}')">✕</button>
+          </div>
+        </div>
+        <div class="section-panel" id="sp-${d.doc_id}">
+          <div class="section-label-sm">点击章节定向解读 ↓</div>
+          <div class="section-tags" id="st-${d.doc_id}"><span style="font-size:.7rem;color:var(--muted)">加载中…</span></div>
+        </div>
+      </li>`;
+    }).join('');
+    updateSelectTip();
+  }catch(e){if(e.message!=='请先登录') document.getElementById('docList').innerHTML=`<li class="empty-msg">加载失败</li>`;}
+}
+
+async function toggleSectionPanel(docId){
+  const panel=document.getElementById(`sp-${docId}`);
+  if(panel.classList.contains('open')){panel.classList.remove('open');return;}
+  panel.classList.add('open');
+  if(!selectedDocs.has(docId)){selectedDocs.add(docId);const cb=document.querySelector(`[data-id="${docId}"]`);if(cb)cb.checked=true;updateSelectTip();}
+  const tagsEl=document.getElementById(`st-${docId}`);
+  try{
+    const data=await(await authFetch(`${API}/api/documents/${docId}/sections`)).json();
+    if(!data.sections.length){tagsEl.textContent='未检测到章节结构';return;}
+    tagsEl.innerHTML=data.sections.map(sec=>
+      `<button class="abtn-section" data-section="${esc(sec)}" onclick="askSectionSummary('${escA(sec)}')">${esc(sec)}</button>`
+    ).join('');
+  }catch{tagsEl.textContent='章节加载失败';}
+}
+function toggleDoc(docId,checked){if(checked)selectedDocs.add(docId);else selectedDocs.delete(docId);updateSelectTip();}
+function toggleSelectAll(){
+  const ids=allDocs.filter(d=>d.status==='ready').map(d=>d.doc_id);
+  const all=ids.every(id=>selectedDocs.has(id));
+  ids.forEach(id=>all?selectedDocs.delete(id):selectedDocs.add(id));
+  document.querySelectorAll('.doc-check').forEach(cb=>{cb.checked=selectedDocs.has(cb.dataset.id);});
+  updateSelectTip();
+}
+function updateSelectTip(){
+  document.getElementById('selectTip').innerHTML=selectedDocs.size===0
+    ?'查询范围：全部文档':`查询范围：已选 <strong>${selectedDocs.size}</strong> 篇`;
+}
+async function deleteDoc(docId,name){
+  if(!confirm(`确认删除「${name}」？`))return;
+  await authFetch(`${API}/api/documents/${docId}`,{method:'DELETE'});
+  selectedDocs.delete(docId);loadDocuments();loadStats();
+}
+
+// ── Upload with progress ──────────────────────────────────────
+function xhrUpload(file,onProgress){
+  return new Promise((resolve,reject)=>{
+    const xhr=new XMLHttpRequest(),form=new FormData();
+    form.append('file',file);
+    xhr.upload.onprogress=e=>{if(e.lengthComputable)onProgress(Math.round(e.loaded/e.total*100));};
+    xhr.onload=()=>{try{const d=JSON.parse(xhr.responseText);xhr.status<300?resolve(d):reject(d);}catch{reject({detail:'解析失败'});}};
+    xhr.onerror=()=>reject({detail:'网络错误'});
+    const tok=localStorage.getItem('auth_token');
+    xhr.open('POST',`${API}/api/upload`);
+    if(tok)xhr.setRequestHeader('Authorization',`Bearer ${tok}`);
+    xhr.send(form);
+  });
+}
+document.getElementById('fileInput').addEventListener('change',async e=>{
+  const files=[...e.target.files];if(!files.length)return;
+  const statusEl=document.getElementById('uploadStatus');
+  const states=files.map(f=>({name:f.name,state:'pending',pct:0}));
+  function render(){
+    const done=states.filter(f=>f.state==='ok'||f.state==='err').length;
+    statusEl.innerHTML=states.map(f=>{
+      const icon=f.state==='pending'?'<span style="color:var(--muted)">⏸</span>'
+        :f.state==='ok'?'<span style="color:#4ade80">✅</span>'
+        :f.state==='err'?'<span style="color:#f87171">❌</span>':'';
+      const bar=f.state==='uploading'
+        ?`<div class="upload-progress-wrap"><div class="upload-progress-bar"><div class="upload-progress-fill" style="width:${f.pct}%"></div></div><span class="upload-progress-pct">${f.pct}%</span></div>`:'';
+      return `<div style="font-size:.75rem;padding:2px 0">${icon} ${esc(f.name)}${bar}</div>`;
+    }).join('')+(done===files.length?`<div style="margin-top:6px;font-size:.75rem;color:var(--gold)">✦ 全部上传完毕，后台处理中…</div>`:`<div style="font-size:.68rem;color:var(--muted);margin-top:4px">${done}/${files.length} 已完成</div>`);
+  }
+  render();
+  for(let i=0;i<files.length;i++){
+    states[i].state='uploading';render();
+    try{
+      const d=await xhrUpload(files[i],pct=>{states[i].pct=pct;render();});
+      states[i].state='ok';states[i].pct=100;pollStatus(d.doc_id);
+    }catch(err){states[i].state='err';states[i].name+=`（${err.detail||'失败'}）`;}
+    render();
+  }
+  e.target.value='';loadDocuments();updateUsageBar();
+});
+async function pollStatus(docId){
+  const iv=setInterval(async()=>{
+    try{const r=await authFetch(`${API}/api/documents/${docId}/status`);const d=await r.json();
+      if(d.status==='ready'||d.status==='error'){clearInterval(iv);loadDocuments();loadStats();}}
+    catch{clearInterval(iv);}
+  },3000);
+}
+async function loadStats(){
+  try{const r=await authFetch(`${API}/api/stats`);const d=await r.json();
+    document.getElementById('statsBar').textContent=`知识库共 ${d.total_vectors} 个向量块`;}catch{}
+}
+
+// ── Ask / Stream ──────────────────────────────────────────────
+function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();askQuestion();}}
+async function askQuestion(overrideQ){
+  if(isAsking)return;
+  const input=document.getElementById('questionInput');
+  let q=overrideQ||input.value.trim();
+  if(!q){if(activeSection){await askQuestion(`请详细解读这篇论文的【${activeSection}】部分，提炼核心内容和要点。`);return;}return;}
+  isAsking=true;document.getElementById('sendBtn').disabled=true;
+  if(!overrideQ)input.value='';
+  const now=new Date().toISOString(),sec=activeSection;
+  const box=document.getElementById('chatHistory');
+  const tip=document.getElementById('emptyTip');if(tip)tip.remove();
+  const qEl=document.createElement('div');qEl.className='msg-group';
+  qEl.innerHTML=`<div class="msg-q">${sec?`<div class="msg-section-tag">📌 ${esc(sec)}</div>`:''}
+    <div class="bubble">${esc(q)}</div><div class="msg-time">${formatTime(now)}</div></div>`;
+  box.appendChild(qEl);scrollToBottom();
+  const aEl=document.createElement('div');aEl.className='msg-group';
+  const aMsgDiv=document.createElement('div');aMsgDiv.className='msg-a';
+  const bubble=document.createElement('div');bubble.className='bubble streaming';
+  bubble.innerHTML=`<span class="thinking"><span></span><span></span><span></span></span>`;
+  const srcEl=document.createElement('div');srcEl.className='msg-sources';
+  const timeEl=document.createElement('div');timeEl.className='msg-time';timeEl.textContent=formatTime(now);
+  aMsgDiv.append(bubble,srcEl,timeEl);aEl.appendChild(aMsgDiv);box.appendChild(aEl);scrollToBottom();
+  let fullText='',finalSources=[],rafPending=false;
+  try{
+    const body={question:q,doc_ids:selectedDocs.size>0?[...selectedDocs]:[],section:sec};
+    const res=await authFetch(`${API}/api/ask/stream`,{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(!res.ok)throw new Error(`HTTP ${res.status}`);
+    const reader=res.body.getReader(),decoder=new TextDecoder();
+    bubble.textContent='';
+    while(true){
+      const{done,value}=await reader.read();if(done)break;
+      for(const line of decoder.decode(value).split('\n')){
+        if(!line.startsWith('data: '))continue;
+        const raw=line.slice(6).trim();if(raw==='[DONE]')break;
+        try{
+          const obj=JSON.parse(raw);
+          if(obj.type==='text'){fullText+=obj.text;bubble.textContent=fullText;
+            if(!rafPending){rafPending=true;requestAnimationFrame(()=>{scrollToBottom();rafPending=false;});}}
+          else if(obj.type==='sources'&&obj.sources.length){
+            finalSources=obj.sources;
+            srcEl.innerHTML=finalSources.map(s=>`<span class="src-tag" title="${(s.score*100).toFixed(0)}%相关${s.section?' · '+s.section:''}">${esc(s.filename)}</span>`).join('');
+          }
+        }catch{}
+      }
+    }
+    bubble.classList.remove('streaming');
+    aMsgDiv.insertBefore(
+      Object.assign(document.createElement('div'),{innerHTML:msgActionsHtml(fullText,q,sec)}).firstElementChild,
+      srcEl
+    );
+    scrollToBottom();
+    if(currentUser){currentUser.query_count_today=(currentUser.query_count_today||0)+1;updateUsageBar();}
+    const history=loadHistory();
+    history.push({question:q,answer:fullText,sources:finalSources,time:now,section:sec});
+    saveHistory(history);
+  }catch(err){
+    bubble.textContent=`❌ 请求失败：${err.message}`;bubble.classList.remove('streaming');
+  }finally{
+    isAsking=false;document.getElementById('sendBtn').disabled=false;
+    document.getElementById('questionInput').focus();
+  }
+}
+
+// ── Generate review ───────────────────────────────────────────
+function generateReview(){
+  if(selectedDocs.size===0){alert('请先在文档库中勾选需要综述的文献');return;}
+  const q=`请基于以上选中的 ${selectedDocs.size} 篇文献，撰写一篇学术文献综述`;
+  document.getElementById('questionInput').value=q;
+  setTimeout(()=>askQuestion(q),100);
+}
+
+// ── Init ──────────────────────────────────────────────────────
+checkAuth();
+setInterval(()=>{if(currentUser)loadDocuments();},10000);
+</script>
+</body>
+</html>
