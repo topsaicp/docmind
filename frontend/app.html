@@ -196,6 +196,48 @@ input,textarea{font-family:inherit}
 .btn-submit:hover{opacity:.88}
 .btn-submit:disabled{opacity:.4}
 
+/* ── Mode tabs ── */
+.mode-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);flex-shrink:0}
+.mode-tab{flex:1;background:transparent;border:none;border-bottom:2px solid transparent;
+  padding:11px 0;font-size:.82rem;color:var(--muted);cursor:pointer;transition:all .2s;
+  font-family:inherit}
+.mode-tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+.mode-tab:hover:not(.active){color:var(--fg)}
+.tab-actions{display:flex;gap:6px;padding:8px 16px;flex-shrink:0;align-items:center}
+
+/* ── Write module ── */
+.write-view{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:0}
+.write-meta{padding:14px 20px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.write-topic-input{flex:1;min-width:160px;background:rgba(255,255,255,.05);border:1px solid var(--border);
+  border-radius:6px;padding:7px 12px;font-size:.82rem;color:var(--fg);outline:none;
+  transition:border-color .2s}
+.write-topic-input:focus{border-color:rgba(201,168,76,.4)}
+.write-topic-input::placeholder{color:var(--muted)}
+.write-doc-badge{font-size:.72rem;color:var(--muted);white-space:nowrap}
+.write-doc-badge strong{color:var(--gold)}
+.write-sections-list{flex:1;padding:14px 20px;display:flex;flex-direction:column;gap:12px}
+.ws-item{background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;
+  transition:border-color .2s}
+.ws-item:focus-within{border-color:rgba(201,168,76,.25)}
+.ws-header{display:flex;align-items:center;gap:8px;padding:10px 14px;
+  border-bottom:1px solid var(--border);background:rgba(255,255,255,.02)}
+.ws-num{width:20px;height:20px;background:rgba(201,168,76,.12);color:var(--gold);
+  border-radius:50%;font-size:.68rem;font-weight:700;display:flex;align-items:center;
+  justify-content:center;flex-shrink:0}
+.ws-title{font-size:.82rem;font-weight:600;color:var(--fg);flex:1}
+.ws-badge{font-size:.65rem;padding:1px 7px;border-radius:3px;font-weight:600}
+.ws-badge-done{background:rgba(74,222,128,.1);color:#4ade80}
+.ws-badge-gen{background:rgba(201,168,76,.1);color:var(--gold)}
+.ws-badge-err{background:rgba(248,113,113,.1);color:#f87171}
+.ws-actions{display:flex;gap:5px}
+.ws-content{width:100%;background:transparent;border:none;resize:none;
+  font-size:.82rem;color:var(--fg);line-height:1.8;padding:12px 14px;
+  outline:none;font-family:inherit;min-height:100px;max-height:300px}
+.ws-content::placeholder{color:var(--muted)}
+.write-footer{padding:12px 20px;border-top:1px solid var(--border);
+  display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;background:rgba(255,255,255,.01)}
+.ws-progress{font-size:.72rem;color:var(--muted);text-align:center;padding:4px 0}
+
 @media(max-width:768px){
   :root{--sidebar-w:100%}
   .workspace{grid-template-columns:1fr;grid-template-rows:auto 1fr}
@@ -282,18 +324,40 @@ input,textarea{font-family:inherit}
     </div>
   </div>
 
-  <!-- Right panel: Chat -->
+  <!-- Right panel -->
   <div class="right-panel">
-    <div class="chat-header">
-      <span class="chat-header-title">AI 问答</span>
-      <div class="chat-header-actions">
+
+    <!-- Mode tabs -->
+    <div class="mode-tabs">
+      <button class="mode-tab active" id="tab-qa" onclick="switchMode('qa')">📖 知识库问答</button>
+      <button class="mode-tab" id="tab-write" onclick="switchMode('write')">✍️ 论文撰写</button>
+    </div>
+
+    <!-- QA view -->
+    <div id="qaView" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+      <div class="tab-actions">
         <button class="abtn abtn-ghost" onclick="generateReview()" title="基于已选文献生成学术综述">📝 生成综述</button>
         <button class="abtn abtn-ghost" onclick="clearHistory()">🗑 清空历史</button>
       </div>
+      <div class="chat-area" id="chatHistory">
+        <div class="chat-empty" id="emptyTip">从左侧选择文献，在下方输入问题开始对话</div>
+      </div>
     </div>
-    <div class="chat-area" id="chatHistory">
-      <div class="chat-empty" id="emptyTip">从左侧选择文献，在下方输入问题开始对话</div>
+
+    <!-- Write view -->
+    <div id="writeView" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+      <div class="write-meta">
+        <input class="write-topic-input" id="writeTopic" placeholder="综述主题（可选，例：基于深度学习的医学图像分析）">
+        <span class="write-doc-badge">已选 <strong id="writeDocCount">0</strong> 篇文献</span>
+      </div>
+      <div class="write-view" id="writeSectionsList"></div>
+      <div class="write-footer">
+        <button class="abtn abtn-gold" onclick="generateAllSections()">⚡ 一键生成全文</button>
+        <button class="abtn abtn-ghost" onclick="exportPaper()">📥 导出全文 (.txt)</button>
+        <button class="abtn abtn-ghost" onclick="clearAllSections()">🗑 清空内容</button>
+      </div>
     </div>
+
   </div>
 
 </div>
@@ -568,6 +632,7 @@ function toggleSelectAll(){
 function updateSelectTip(){
   document.getElementById('selectTip').innerHTML=selectedDocs.size===0
     ?'查询范围：全部文档':`查询范围：已选 <strong>${selectedDocs.size}</strong> 篇`;
+  updateWriteDocCount();
 }
 async function deleteDoc(docId,name){
   if(!confirm(`确认删除「${name}」？`))return;
@@ -692,7 +757,7 @@ async function askQuestion(overrideQ){
   }
 }
 
-// ── Generate review ───────────────────────────────────────────
+// ── Generate review (QA mode) ─────────────────────────────────
 function generateReview(){
   if(selectedDocs.size===0){alert('请先在文档库中勾选需要综述的文献');return;}
   const q=`请基于以上选中的 ${selectedDocs.size} 篇文献，撰写一篇学术文献综述`;
@@ -700,8 +765,164 @@ function generateReview(){
   setTimeout(()=>askQuestion(q),100);
 }
 
+// ══════════════════════════════════════════════════════════════
+// ── Paper Writing Module ──────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+
+const WRITE_SECTIONS=[
+  {id:'intro',   label:'一、引言',       hint:'研究背景、意义、现有研究不足及研究目的'},
+  {id:'review',  label:'二、文献综述',   hint:'系统梳理现有研究成果，按主题或时间脉络组织'},
+  {id:'method',  label:'三、研究方法',   hint:'所涉及的研究方法、数据来源、实验/分析设计'},
+  {id:'results', label:'四、结果与分析', hint:'核心研究发现、数据与实验结果'},
+  {id:'discuss', label:'五、讨论与结论', hint:'研究意义、局限性、未来研究方向'},
+];
+
+const SECTION_PROMPTS={
+  intro:  (topic,n)=>`请基于以上 ${n} 篇文献，为主题「${topic||'该研究领域'}」撰写学术论文的【引言】部分。内容包括：研究背景（领域概述）、研究意义（为什么重要）、现有研究的不足、本文研究目的。使用学术写作风格，字数约500字。`,
+  review: (topic,n)=>`请基于以上 ${n} 篇文献，为主题「${topic||'该研究领域'}」撰写【文献综述】部分。系统梳理现有研究成果，按主题或方法分类，指出各研究的贡献与局限，并引用具体文献。字数约700字。`,
+  method: (topic,n)=>`请基于以上 ${n} 篇文献，总结「${topic||'该研究领域'}」中常用的【研究方法】。包括主要研究范式、数据来源、评估指标等，对比不同方法的优缺点。字数约500字。`,
+  results:(topic,n)=>`请基于以上 ${n} 篇文献，提炼「${topic||'该研究领域'}」的【主要研究结果与发现】。包括各文献的核心结论、关键数据、代表性实验结果，并进行对比分析。字数约600字。`,
+  discuss:(topic,n)=>`请基于以上 ${n} 篇文献，为主题「${topic||'该研究领域'}」撰写【讨论与结论】部分。总结主要发现的意义、现有研究的局限性、对未来研究的启示与展望。字数约500字。`,
+};
+
+let writingActive=false;
+
+function switchMode(mode){
+  const isWrite=mode==='write';
+  document.getElementById('tab-qa').classList.toggle('active',!isWrite);
+  document.getElementById('tab-write').classList.toggle('active',isWrite);
+  document.getElementById('qaView').style.display=isWrite?'none':'flex';
+  document.getElementById('writeView').style.display=isWrite?'flex':'none';
+  document.querySelector('.qa-bar').style.display=isWrite?'none':'block';
+  if(isWrite) updateWriteDocCount();
+}
+
+function updateWriteDocCount(){
+  document.getElementById('writeDocCount').textContent=
+    selectedDocs.size>0?selectedDocs.size:'全部';
+}
+
+function initWriteSections(){
+  const el=document.getElementById('writeSectionsList');
+  el.innerHTML=WRITE_SECTIONS.map(s=>`
+    <div class="ws-item" id="wsi-${s.id}">
+      <div class="ws-header">
+        <span class="ws-num">${s.id==='intro'?1:s.id==='review'?2:s.id==='method'?3:s.id==='results'?4:5}</span>
+        <span class="ws-title">${s.label}</span>
+        <span class="ws-badge" id="wsb-${s.id}" style="display:none"></span>
+        <div class="ws-actions">
+          <button class="abtn abtn-gold" style="font-size:.72rem;padding:4px 10px"
+            onclick="generateSection('${s.id}')" id="wsbtn-${s.id}">⚡ 生成</button>
+          <button class="abtn abtn-ghost" style="font-size:.72rem;padding:4px 8px"
+            onclick="copySection('${s.id}')">📋</button>
+        </div>
+      </div>
+      <div class="ws-progress" id="wsp-${s.id}" style="display:none"></div>
+      <textarea class="ws-content" id="wsc-${s.id}"
+        placeholder="点击「⚡ 生成」让 AI 撰写本节，或在此直接手动编写…\n\n提示：${s.hint}"
+        oninput="autoResize(this)"></textarea>
+    </div>
+  `).join('');
+}
+
+function autoResize(ta){
+  ta.style.height='auto';
+  ta.style.height=Math.min(ta.scrollHeight,300)+'px';
+}
+
+async function generateSection(id){
+  if(writingActive){alert('正在生成中，请稍候…');return;}
+  const docIds=selectedDocs.size>0?[...selectedDocs]:allDocs.filter(d=>d.status==='ready').map(d=>d.doc_id);
+  if(!docIds.length){alert('请先上传并选择文献');return;}
+  const topic=document.getElementById('writeTopic').value.trim();
+  const prompt=SECTION_PROMPTS[id](topic,docIds.length);
+  const btn=document.getElementById(`wsbtn-${id}`);
+  const badge=document.getElementById(`wsb-${id}`);
+  const progress=document.getElementById(`wsp-${id}`);
+  const ta=document.getElementById(`wsc-${id}`);
+  writingActive=true;
+  btn.disabled=true;btn.textContent='生成中…';
+  badge.className='ws-badge ws-badge-gen';badge.textContent='生成中';badge.style.display='';
+  progress.style.display='block';progress.textContent='▌ AI 正在撰写…';
+  ta.value='';autoResize(ta);
+  try{
+    const res=await authFetch(`${API}/api/ask/stream`,{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({question:prompt,doc_ids:docIds,section:''})});
+    if(!res.ok)throw new Error(`HTTP ${res.status}`);
+    const reader=res.body.getReader(),decoder=new TextDecoder();
+    let text='',rafPending=false;
+    while(true){
+      const{done,value}=await reader.read();if(done)break;
+      for(const line of decoder.decode(value).split('\n')){
+        if(!line.startsWith('data: '))continue;
+        const raw=line.slice(6).trim();if(raw==='[DONE]')break;
+        try{
+          const obj=JSON.parse(raw);
+          if(obj.type==='text'){
+            text+=obj.text;ta.value=text;
+            if(!rafPending){rafPending=true;requestAnimationFrame(()=>{autoResize(ta);rafPending=false;});}
+          }
+        }catch{}
+      }
+    }
+    badge.className='ws-badge ws-badge-done';badge.textContent='✓ 已生成';
+    progress.style.display='none';
+  }catch(err){
+    badge.className='ws-badge ws-badge-err';badge.textContent='失败';
+    progress.textContent='❌ 生成失败：'+err.message;
+  }finally{
+    writingActive=false;btn.disabled=false;btn.textContent='⚡ 重新生成';
+  }
+}
+
+async function generateAllSections(){
+  if(writingActive){alert('正在生成中，请稍候…');return;}
+  for(const s of WRITE_SECTIONS){
+    await generateSection(s.id);
+    await new Promise(r=>setTimeout(r,600));
+  }
+}
+
+function copySection(id){
+  const ta=document.getElementById(`wsc-${id}`);
+  if(!ta.value.trim()){alert('该章节尚未生成内容');return;}
+  navigator.clipboard.writeText(ta.value).then(()=>{
+    const btn=document.querySelector(`#wsi-${id} .ws-actions button:last-child`);
+    const orig=btn.textContent;btn.textContent='✅';
+    setTimeout(()=>btn.textContent=orig,1500);
+  });
+}
+
+function clearAllSections(){
+  if(!confirm('确认清空所有章节内容？'))return;
+  WRITE_SECTIONS.forEach(s=>{
+    const ta=document.getElementById(`wsc-${s.id}`);if(ta)ta.value='';
+    const b=document.getElementById(`wsb-${s.id}`);if(b)b.style.display='none';
+    const btn=document.getElementById(`wsbtn-${s.id}`);if(btn){btn.disabled=false;btn.textContent='⚡ 生成';}
+    const p=document.getElementById(`wsp-${s.id}`);if(p)p.style.display='none';
+  });
+}
+
+function exportPaper(){
+  const topic=document.getElementById('writeTopic').value.trim()||'学术综述';
+  let content=`${topic}\n${'═'.repeat(Math.min(topic.length*2,60))}\n\n`;
+  let empty=true;
+  WRITE_SECTIONS.forEach(s=>{
+    const val=document.getElementById(`wsc-${s.id}`).value.trim();
+    if(val){content+=`${s.label}\n${'-'.repeat(30)}\n${val}\n\n`;empty=false;}
+  });
+  if(empty){alert('请先生成至少一个章节的内容');return;}
+  content+=`\n—— 由 DocMind 生成 · ${new Date().toLocaleDateString('zh-CN')} ——`;
+  const blob=new Blob([content],{type:'text/plain;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`${topic.slice(0,30)}_综述.txt`;a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 // ── Init ──────────────────────────────────────────────────────
 checkAuth();
+initWriteSections();
 setInterval(()=>{if(currentUser)loadDocuments();},10000);
 </script>
 </body>
