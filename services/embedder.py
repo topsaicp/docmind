@@ -1,13 +1,22 @@
 """
 向量化服务：Jina AI Embedding API + Chroma
 无需本地模型，零内存占用
+
+v2 新增：
+- add_chunks() 存储 parent_group_id / child_seq 元数据
+- expand_hits_to_parent() 将检索命中的子块展开为父块上下文
 """
+import re
 import requests
 import chromadb
 from tqdm import tqdm
 from config import CHROMA_DIR, COLLECTION_NAME, JINA_API_KEY
 
 _collection = None
+
+# 元数据前缀模式（用于展开时剥离重复前缀）
+_META_PREFIX_RE = re.compile(r'^\[文档:[^\]]*\](?:\[章节:[^\]]*\])?\s*\n?')
+
 
 def embed_texts(texts: list[str], is_query: bool = False) -> list[list[float]]:
     task = "retrieval.query" if is_query else "retrieval.passage"
@@ -44,11 +53,14 @@ def add_chunks(chunks: list[dict], batch_size: int = 32) -> int:
             documents  = texts,
             embeddings = embeddings,
             metadatas  = [{
-                "doc_id":   c["doc_id"],
-                "filename": c["filename"],
-                "chunk_id": c["chunk_id"],
-                "lang":     c.get("lang", "en"),
-                "section":  c.get("section", ""),
+                "doc_id":          c["doc_id"],
+                "filename":        c["filename"],
+                "chunk_id":        c["chunk_id"],
+                "lang":            c.get("lang", "en"),
+                "section":         c.get("section", ""),
+                # 父子块追踪字段（v2）
+                "parent_group_id": c.get("parent_group_id", ""),
+                "child_seq":       c.get("child_seq", 0),
             } for c in batch],
         )
         added += len(batch)
@@ -121,10 +133,60 @@ def search(query: str, top_k: int = 8, doc_ids: list[str] | None = None,
 
     results = collection.query(**kwargs)
     return [{
-        "text":     results["documents"][0][i],
-        "filename": results["metadatas"][0][i]["filename"],
-        "doc_id":   results["metadatas"][0][i]["doc_id"],
-        "chunk_id": results["metadatas"][0][i]["chunk_id"],
-        "section":  results["metadatas"][0][i].get("section", ""),
-        "score":    round(1 - results["distances"][0][i], 4),
+        "text":            results["documents"][0][i],
+        "filename":        results["metadatas"][0][i]["filename"],
+        "doc_id":          results["metadatas"][0][i]["doc_id"],
+        "chunk_id":        results["metadatas"][0][i]["chunk_id"],
+        "section":         results["metadatas"][0][i].get("section", ""),
+        "parent_group_id": results["metadatas"][0][i].get("parent_group_id", ""),
+        "score":           round(1 - results["distances"][0][i], 4),
     } for i in range(len(results["documents"][0]))]
+
+
+def expand_hits_to_parent(hits: list[dict], window: int = 1) -> list[dict]:
+    """
+    父块展开：将每个子块命中扩展为「前 window 块 + 命中块 + 后 window 块」的
+    父块上下文，为 LLM 提供更完整的原文语境。
+
+    - window=1 → 父块 = 3 个子块（约 840 中文字 / 1440 英文字）
+    - 只展开同一文档内的相邻块，不跨文档
+    - 相邻块的元数据前缀 [文档: ...][章节: ...] 仅保留首块，避免重复
+    - 对旧版文档（无 parent_group_id 元数据）降级：直接按 chunk_id ±window 取块
+    """
+    if not hits:
+        return hits
+
+    collection = _get_collection()
+    expanded   = []
+
+    for hit in hits:
+        doc_id = hit["doc_id"]
+        cid    = int(hit.get("chunk_id", 0))
+        ids    = [f"{doc_id}_{i}" for i in range(max(0, cid - window), cid + window + 1)]
+
+        try:
+            res = collection.get(ids=ids, include=["documents", "metadatas"])
+            if not res["documents"]:
+                expanded.append(hit)
+                continue
+
+            # 按 chunk_id 排序
+            pairs = sorted(
+                zip(res["documents"], res["metadatas"]),
+                key=lambda x: int(x[1].get("chunk_id", 0)),
+            )
+
+            # 首块保留前缀，其余剥除（避免重复的元数据前缀干扰 LLM）
+            texts = []
+            for idx, (doc_text, _) in enumerate(pairs):
+                if idx == 0:
+                    texts.append(doc_text)
+                else:
+                    texts.append(_META_PREFIX_RE.sub('', doc_text))
+
+            expanded.append({**hit, "text": "\n\n".join(texts)})
+
+        except Exception:
+            expanded.append(hit)   # 任何异常降级为原始子块
+
+    return expanded

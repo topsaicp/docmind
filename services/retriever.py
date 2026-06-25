@@ -4,7 +4,7 @@
 """
 from openai import OpenAI
 from config import DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, LLM_MODEL, TOP_K
-from services.embedder import search, get_doc_sections, get_doc_header
+from services.embedder import search, get_doc_sections, get_doc_header, expand_hits_to_parent
 
 _client = None
 
@@ -297,7 +297,10 @@ def ask(
 
     else:
         # ── 常规单文档/章节检索模式 ──
-        hits    = retrieve(question, doc_ids=doc_ids, section=section)
+        hits = retrieve(question, doc_ids=doc_ids, section=section)
+        # 父块展开：将每个子块命中扩展为前后各 1 块的完整上下文
+        # 让 DeepSeek 看到更完整的原文，减少断章取义和幻觉
+        hits    = expand_hits_to_parent(hits, window=1)
         context = build_context(hits)
         sources = [
             {"filename": h["filename"], "score": h["score"], "section": h.get("section", "")}

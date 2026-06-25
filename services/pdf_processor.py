@@ -1,16 +1,27 @@
 """
-PDF处理：扫描件检测 → 结构化文字提取 → 清洗 → 分块
-- 英文 PDF：PyMuPDF 字体大小识别章节标题，保留 Abstract/Introduction/... 结构
-- 中文 PDF：markitdown 提取（效果好）
-- 扫描件：PyMuPDF OCR 兜底
+PDF处理：扫描件检测 → 结构化文字提取 → 清洗 → 分块 (v2)
+
+分块策略（五项升级）：
+  1. 章节感知切分     — 绝不跨章节合并块
+  2. 句子边界切分     — 断点落在句末标点，不从句子中间截断
+  3. 滑动窗口重叠     — 相邻块保留 ~18% 重叠，跨块语义衔接
+  4. LaTeX/表格保护  — 公式与表格视为原子单元，禁止从中间截断
+  5. 元数据前缀注入  — 每块文本开头拼入 [文档: X][章节: Y]，
+                       Jina 编码时同时捕获结构语义
+  + 父子块追踪       — 每 PARENT_WINDOW 个子块构成一个父块组，
+                       检索命中子块后可展开为父块上下文喂给 LLM
 """
 import re
 from collections import Counter
-import fitz                      # PyMuPDF
 from pathlib import Path
-from config import CHUNK_SIZE_EN, CHUNK_SIZE_ZH, CHUNK_OVERLAP
+import fitz                      # PyMuPDF
+from config import (
+    CHILD_CHUNK_ZH, CHILD_CHUNK_EN,
+    CHUNK_OVERLAP_ZH, CHUNK_OVERLAP_EN,
+    PARENT_WINDOW,
+)
 
-# 英文学术论文常见章节名（匹配无编号的节标题）
+# ── 章节名正则 ────────────────────────────────────────────────────────
 _EN_SECTION_RE = re.compile(
     r'^(abstract|introduction|background|related work|literature review|'
     r'prior work|preliminary|preliminaries|motivation|problem (statement|formulation)|'
@@ -20,55 +31,43 @@ _EN_SECTION_RE = re.compile(
     r'discussion|limitations?|future work|conclusions?|summary|'
     r'acknowledgements?|acknowledgments?|funding|'
     r'references?|bibliography|appendix\s*[a-z]?)\s*$',
-    re.IGNORECASE
+    re.IGNORECASE,
 )
+_EN_NUMBERED_RE = re.compile(r'^(\d+\.(\d+\.)*|[A-Z]\.\s)\s*\S{2,}')
 
-# 匹配带编号的章节："1. Introduction" / "3.1. System Model" / "A. Appendix"
-_EN_NUMBERED_RE = re.compile(
-    r'^(\d+\.(\d+\.)*|[A-Z]\.\s)\s*\S{2,}',
-)
-
-# 英文节名 → 双语标准化（让中文查询也能命中英文论文章节）
 _SECTION_BILINGUAL = {
-    'abstract':             'Abstract（摘要）',
-    'introduction':         'Introduction（引言/简介）',
-    'background':           'Background（背景）',
-    'related work':         'Related Work（相关工作）',
-    'literature review':    'Literature Review（文献综述）',
-    'prior work':           'Prior Work（前期工作）',
-    'methodology':          'Methodology（研究方法）',
-    'method':               'Method（方法）',
-    'methods':              'Methods（方法）',
-    'materials and methods':'Materials and Methods（材料与方法）',
-    'experimental setup':   'Experimental Setup（实验设置）',
-    'experiments':          'Experiments（实验）',
-    'evaluation':           'Evaluation（评估）',
-    'results':              'Results（结果）',
+    'abstract':              'Abstract（摘要）',
+    'introduction':          'Introduction（引言/简介）',
+    'background':            'Background（背景）',
+    'related work':          'Related Work（相关工作）',
+    'literature review':     'Literature Review（文献综述）',
+    'prior work':            'Prior Work（前期工作）',
+    'methodology':           'Methodology（研究方法）',
+    'method':                'Method（方法）',
+    'methods':               'Methods（方法）',
+    'materials and methods': 'Materials and Methods（材料与方法）',
+    'experimental setup':    'Experimental Setup（实验设置）',
+    'experiments':           'Experiments（实验）',
+    'evaluation':            'Evaluation（评估）',
+    'results':               'Results（结果）',
     'results and discussion':'Results and Discussion（结果与讨论）',
-    'discussion':           'Discussion（讨论）',
-    'analysis':             'Analysis（分析）',
+    'discussion':            'Discussion（讨论）',
+    'analysis':              'Analysis（分析）',
     'performance evaluation':'Performance Evaluation（性能评估）',
-    'conclusion':           'Conclusion（结论）',
-    'conclusions':          'Conclusions（结论）',
-    'future work':          'Future Work（未来工作）',
-    'limitations':          'Limitations（局限性）',
-    'acknowledgements':     'Acknowledgements（致谢）',
-    'acknowledgments':      'Acknowledgments（致谢）',
-    'references':           'References（参考文献）',
-    'bibliography':         'Bibliography（参考文献）',
-    'appendix':             'Appendix（附录）',
-    'system overview':      'System Overview（系统概述）',
-    'implementation':       'Implementation（实现）',
-    'summary':              'Summary（总结）',
+    'conclusion':            'Conclusion（结论）',
+    'conclusions':           'Conclusions（结论）',
+    'future work':           'Future Work（未来工作）',
+    'limitations':           'Limitations（局限性）',
+    'acknowledgements':      'Acknowledgements（致谢）',
+    'acknowledgments':       'Acknowledgments（致谢）',
+    'references':            'References（参考文献）',
+    'bibliography':          'Bibliography（参考文献）',
+    'appendix':              'Appendix（附录）',
+    'system overview':       'System Overview（系统概述）',
+    'implementation':        'Implementation（实现）',
+    'summary':               'Summary（总结）',
 }
 
-def _bilingual_section(raw: str) -> str:
-    """将节名转为 '英文（中文）' 双语格式；去掉编号前缀"""
-    name = re.sub(r'^(\d+\.)+\s*|^[A-Z]\.\s*', '', raw).strip()
-    key  = name.lower().rstrip(':').strip()
-    return _SECTION_BILINGUAL.get(key, name)
-
-# 这些章节对问答无意义，不写入向量库（参考文献、致谢等）
 _SKIP_SECTIONS = {
     'References（参考文献）',
     'Bibliography（参考文献）',
@@ -78,8 +77,19 @@ _SKIP_SECTIONS = {
     'Data availability',
 }
 
+_BIG_SECTIONS = {
+    'Abstract（摘要）', 'Conclusion（结论）', 'Conclusions（结论）',
+    'Summary（总结）', 'Introduction（引言/简介）',
+}
 
-# ── 工具函数 ────────────────────────────────────────────────────────────
+
+def _bilingual_section(raw: str) -> str:
+    name = re.sub(r'^(\d+\.)+\s*|^[A-Z]\.\s*', '', raw).strip()
+    key  = name.lower().rstrip(':').strip()
+    return _SECTION_BILINGUAL.get(key, name)
+
+
+# ── 工具函数 ────────────────────────────────────────────────────────
 def is_scanned(pdf_path: str, sample_pages: int = 3) -> bool:
     doc   = fitz.open(pdf_path)
     pages = min(sample_pages, len(doc))
@@ -102,21 +112,110 @@ def detect_language(text: str) -> str:
     return "zh" if zh_chars / max(len(text), 1) > 0.15 else "en"
 
 
-# ── 英文 PDF：结构化提取（保留章节标题）──────────────────────────────
+# ── LaTeX 与表格原子化保护 ────────────────────────────────────────────
+_PH_RE = re.compile(r'\x00PH\d{4}\x00')
+
+
+def _protect_special(text: str) -> tuple[str, dict]:
+    """
+    将 LaTeX 公式和 Markdown 表格替换为不可分割的占位符，
+    防止分块算法从中间截断，导致向量化语义崩坏。
+    """
+    pmap: dict[str, str] = {}
+    count = [0]
+
+    def _sub(m: re.Match) -> str:
+        key = f"\x00PH{count[0]:04d}\x00"
+        pmap[key] = m.group(0)
+        count[0] += 1
+        return key
+
+    # 块级 LaTeX: $$...$$ （允许跨行，限 2000 字符防过贪）
+    text = re.sub(r'\$\$[\s\S]{1,2000}?\$\$', _sub, text)
+    # 行内 LaTeX: $...$ （同行，限 300 字符）
+    text = re.sub(r'\$[^\n$]{1,300}\$', _sub, text)
+    # Markdown 表格：连续含 | 的行（含分隔行 |---|...）
+    text = re.sub(r'(?m)^(\|[^\n]+\|\s*\n){2,}', _sub, text)
+
+    return text, pmap
+
+
+def _restore_special(text: str, pmap: dict) -> str:
+    for key, val in pmap.items():
+        text = text.replace(key, val)
+    return text
+
+
+# ── 句子边界分块（滑动窗口重叠）─────────────────────────────────────
+def _sentence_chunks(text: str, max_chars: int, overlap_chars: int, lang: str) -> list[str]:
+    """
+    在句子结束标点处断块，相邻块保留末尾 overlap_chars 作为重叠。
+    占位符（\x00PH...）不含句子标点，不会被错误切断。
+    """
+    # 按句末标点切分，保留标点附在句子末尾
+    if lang == 'zh':
+        pat = r'(?<=[。！？；\n])'
+    else:
+        pat = r'(?<=[.!?])(?=\s)'
+
+    raw = re.split(pat, text)
+    # 再按换行细分（段落边界必须是切分点）
+    sentences: list[str] = []
+    for seg in raw:
+        for sub in seg.split('\n'):
+            s = sub.strip()
+            if s:
+                sentences.append(s)
+
+    if not sentences:
+        return [text.strip()] if text.strip() else []
+
+    chunks: list[str] = []
+    cur: list[str]    = []
+    cur_len: int      = 0
+    sep = '' if lang == 'zh' else ' '
+
+    for sent in sentences:
+        if cur_len + len(sent) <= max_chars:
+            cur.append(sent)
+            cur_len += len(sent)
+        else:
+            if cur:
+                chunks.append(sep.join(cur))
+                # 滑动窗口：从末尾取句子，直至凑够 overlap_chars
+                olap: list[str] = []
+                olap_len = 0
+                for s in reversed(cur):
+                    if olap_len + len(s) <= overlap_chars:
+                        olap.insert(0, s)
+                        olap_len += len(s)
+                    else:
+                        break
+                cur     = olap + [sent]
+                cur_len = olap_len + len(sent)
+            else:
+                # 单句超过 max_chars：强制按字符切，末尾保留 overlap
+                while len(sent) > max_chars:
+                    chunks.append(sent[:max_chars])
+                    sent = sent[max_chars - overlap_chars:]
+                cur     = [sent]
+                cur_len = len(sent)
+
+    if cur:
+        tail = sep.join(cur)
+        if tail.strip():
+            chunks.append(tail)
+
+    return [c.strip() for c in chunks if c.strip()]
+
+
+# ── 英文 PDF 结构化提取 ───────────────────────────────────────────────
 def _extract_en_structured(pdf_path: str) -> str:
-    """
-    用 PyMuPDF dict 模式逐块提取，按字体大小识别标题。
-    标题行加 ## 前缀，方便后续按节分块。
-    """
     doc = fitz.open(pdf_path)
     out = []
-
     for page in doc:
-        # sort=True 让 PyMuPDF 按阅读顺序（从上到下从左到右）排列块
         blocks = page.get_text("dict", sort=True)["blocks"]
-
-        # 收集本页所有非空 span 的字体大小，用众数作为正文基准
-        sizes = []
+        sizes  = []
         for blk in blocks:
             if blk["type"] != 0:
                 continue
@@ -124,18 +223,12 @@ def _extract_en_structured(pdf_path: str) -> str:
                 for span in line["spans"]:
                     if span["text"].strip():
                         sizes.append(round(span["size"], 1))
-
         base_size = Counter(sizes).most_common(1)[0][0] if sizes else 10.0
 
         for blk in blocks:
-            if blk["type"] != 0:      # 跳过图片块
+            if blk["type"] != 0:
                 continue
-
-            # 拼接块内文本 & 记录最大字号 & 是否全块加粗
-            lines_text = []
-            blk_max_size = 0.0
-            bold_spans = 0
-            total_spans = 0
+            lines_text, blk_max_size, bold_spans, total_spans = [], 0.0, 0, 0
             for line in blk["lines"]:
                 parts = []
                 for span in line["spans"]:
@@ -144,53 +237,35 @@ def _extract_en_structured(pdf_path: str) -> str:
                         parts.append(t)
                         blk_max_size = max(blk_max_size, span["size"])
                         total_spans += 1
-                        if span["flags"] & 16:   # 粗体标志位
+                        if span["flags"] & 16:
                             bold_spans += 1
                 if parts:
                     lines_text.append("".join(parts))
-
             if not lines_text:
                 continue
-
-            blk_text = " ".join(lines_text).strip()
-            if not blk_text:
-                continue
-
+            blk_text    = " ".join(lines_text).strip()
             is_all_bold = total_spans > 0 and bold_spans == total_spans
-
-            # 判断是否为章节标题：
-            # 条件1：字体比正文大 ≥15%（大号标题）
-            # 条件2：全块粗体 + 短行 + 匹配章节名或编号格式
-            # 条件3：无编号但匹配常见章节名（如 "Abstract"）
-            is_heading = len(blk_text) < 150 and (
+            is_heading  = len(blk_text) < 150 and (
                 blk_max_size >= base_size * 1.15
                 or (is_all_bold and (
-                        _EN_SECTION_RE.match(blk_text)
-                        or _EN_NUMBERED_RE.match(blk_text)
-                   ))
+                    _EN_SECTION_RE.match(blk_text)
+                    or _EN_NUMBERED_RE.match(blk_text)
+                ))
                 or _EN_SECTION_RE.match(blk_text)
             )
-
-            if is_heading:
-                out.append(f"\n## {blk_text}\n")
-            else:
-                out.append(blk_text)
-
+            out.append(f"\n## {blk_text}\n" if is_heading else blk_text)
     doc.close()
-    # 合并，去掉开头多余换行
     return "\n\n".join(filter(None, out)).strip()
 
 
-# ── 中文 PDF：markitdown 提取 ────────────────────────────────────────
 def _extract_zh(pdf_path: str) -> str:
     try:
         from markitdown import MarkItDown
         return MarkItDown().convert(pdf_path).text_content.strip()
     except Exception:
-        return _extract_en_structured(pdf_path)   # 降级
+        return _extract_en_structured(pdf_path)
 
 
-# ── 扫描件：PyMuPDF OCR ───────────────────────────────────────────────
 def _extract_ocr(pdf_path: str) -> str:
     doc  = fitz.open(pdf_path)
     text = ""
@@ -206,108 +281,110 @@ def _extract_ocr(pdf_path: str) -> str:
     return text.strip()
 
 
-# ── 主提取入口 ────────────────────────────────────────────────────────
 def extract_text(pdf_path: str) -> str:
     if is_scanned(pdf_path):
         return _extract_ocr(pdf_path)
-
-    # 取前两页判断语言
-    doc  = fitz.open(pdf_path)
+    doc    = fitz.open(pdf_path)
     sample = "".join(doc[i].get_text() for i in range(min(2, len(doc))))
     doc.close()
-
-    if detect_language(sample) == "zh":
-        return _extract_zh(pdf_path)
-    else:
-        return _extract_en_structured(pdf_path)
+    return _extract_zh(pdf_path) if detect_language(sample) == "zh" \
+           else _extract_en_structured(pdf_path)
 
 
-# ── 清洗 ─────────────────────────────────────────────────────────────
 def clean_text(text: str, lang: str = "en") -> str:
-    # 去掉纯数字行（页码）
     text = re.sub(r'(?m)^\s*\d+\s*$', '', text)
-    # 英文：修复行末连字符断词（"meth-\nod" → "method"）
     if lang == "en":
         text = re.sub(r'(\w)-\n(\w)', r'\1\2', text)
-    # 压缩多余空行（保留 ## 标记行前后的空行）
     text = re.sub(r'\n{3,}', '\n\n', text)
     lines = [l.strip() for l in text.split('\n')]
     return '\n'.join(lines).strip()
 
 
-# ── 分块（章节感知）──────────────────────────────────────────────────
+# ── 分块主函数 ────────────────────────────────────────────────────────
 def chunk_text(text: str, doc_id: str, filename: str) -> list[dict]:
     """
-    1. 按 ## 节标题切分（英文结构化提取后自带；中文按段落切）
-    2. 节内按大小合并段落
-    3. 每块 text 前缀加 [节名]，帮助检索时定位章节
+    章节感知 + 句子边界 + 滑动窗口重叠 + LaTeX/表格保护 + 元数据前缀注入
+    返回 list[dict]，每块含 parent_group_id / child_seq 供父块展开使用。
     """
-    lang  = detect_language(text[:500])
-    limit = CHUNK_SIZE_ZH if lang == "zh" else CHUNK_SIZE_EN * 6  # 词数*6≈字符数
-    chunks    = []
-    chunk_idx = 0
+    lang       = detect_language(text[:500])
+    max_chars  = CHILD_CHUNK_ZH  if lang == 'zh' else CHILD_CHUNK_EN
+    ovlp_chars = CHUNK_OVERLAP_ZH if lang == 'zh' else CHUNK_OVERLAP_EN
+    doc_stem   = Path(filename).stem          # 用于元数据前缀
 
-    def flush(buf: str, section: str = ""):
-        nonlocal chunk_idx
-        buf = buf.strip()
-        if len(buf) < 30:
+    chunks:    list[dict] = []
+    chunk_idx: int = 0
+    group_idx: int = 0    # 父块组序号
+    group_cnt: int = 0    # 当前组内已有子块数
+
+    def flush(content: str, section: str, pmap: dict) -> None:
+        nonlocal chunk_idx, group_idx, group_cnt
+
+        content = _restore_special(content, pmap).strip()
+        if len(content) < 20:
             return
+
         bi = _bilingual_section(section) if section else ""
-        # 跳过对问答无价值的章节
         if bi in _SKIP_SECTIONS:
             return
-        full = f"{bi}:\n{buf}" if bi else buf
+
+        # ① 元数据前缀注入（Jina 编码时同时捕获文档与章节语义）
+        prefix = f"[文档: {doc_stem}]"
+        if bi:
+            prefix += f"[章节: {bi}]"
+        full_text = prefix + "\n" + content
+
+        # ② 父子块分组（每 PARENT_WINDOW 个子块重置组）
+        if group_cnt >= PARENT_WINDOW:
+            group_idx += 1
+            group_cnt  = 0
+        parent_group_id = f"{doc_id}_g{group_idx}"
+
         chunks.append({
-            "id":       f"{doc_id}_{chunk_idx}",
-            "doc_id":   doc_id,
-            "filename": filename,
-            "chunk_id": chunk_idx,
-            "text":     full,
-            "lang":     detect_language(full),
-            "section":  bi,
+            "id":              f"{doc_id}_{chunk_idx}",
+            "doc_id":          doc_id,
+            "filename":        filename,
+            "chunk_id":        chunk_idx,
+            "text":            full_text,
+            "lang":            lang,
+            "section":         bi,
+            "parent_group_id": parent_group_id,
+            "child_seq":       group_cnt,
         })
         chunk_idx += 1
+        group_cnt += 1
 
-    # 先按 ## 切节
+    # 按 ## 切节（英文 structured 提取已插入；中文按正则识别）
     raw_sections = re.split(r'\n##\s+', '\n' + text)
+
     for part in raw_sections:
         part = part.strip()
         if not part:
             continue
 
-        # 第一行是节名（来自 ## 标题），其余是正文
         first_nl = part.find('\n')
-        if first_nl > 0 and first_nl < 100:
+        if 0 < first_nl < 120:
             section_name = part[:first_nl].strip().rstrip(':').strip()
-            body = part[first_nl:]
+            body         = part[first_nl:]
         else:
             section_name = ""
-            body = part
+            body         = part
 
-        # 摘要/结论等关键节用更大的 limit，避免切碎
-        bi_name = _bilingual_section(section_name) if section_name else ""
-        _BIG_SECTIONS = {'Abstract（摘要）', 'Conclusion（结论）', 'Conclusions（结论）',
-                         'Summary（总结）', 'Introduction（引言/简介）'}
-        sec_limit = limit * 2 if bi_name in _BIG_SECTIONS else limit
+        bi_name  = _bilingual_section(section_name) if section_name else ""
+        # 关键章节块上限放宽 2x，避免摘要/结论碎片化
+        sec_max  = max_chars * 2 if bi_name in _BIG_SECTIONS else max_chars
 
-        # 节内按空行切段落，合并到 limit
-        paragraphs = [p.strip() for p in re.split(r'\n{2,}', body) if p.strip()]
-        current = ""
+        # ③ LaTeX/表格原子化保护
+        protected, pmap = _protect_special(body)
 
-        for para in paragraphs:
-            if len(current) + len(para) + 2 <= sec_limit:
-                current += ("\n\n" if current else "") + para
-            else:
-                flush(current, section_name)
-                if len(para) > sec_limit:
-                    step = max(sec_limit - CHUNK_OVERLAP * 6, 100)
-                    for i in range(0, len(para), step):
-                        flush(para[i:i + sec_limit], section_name)
-                    current = para[-(CHUNK_OVERLAP * 6):]
-                else:
-                    current = para
+        # ④ 句子边界分块 + 滑动窗口重叠
+        sub_chunks = _sentence_chunks(protected, sec_max, ovlp_chars, lang)
+        for sc in sub_chunks:
+            flush(sc, section_name, pmap)
 
-        flush(current, section_name)
+        # 章节边界强制结束父块组（跨节不共享父块）
+        if group_cnt > 0:
+            group_idx += 1
+            group_cnt  = 0
 
     return chunks
 

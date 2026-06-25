@@ -19,12 +19,18 @@ JINA_API_KEY = os.getenv("JINA_API_KEY", "")
 # Chroma collection 名称
 COLLECTION_NAME = "kb_collection"
 
-# 分块参数
-CHUNK_SIZE_EN = 200    # 英文：词数
-CHUNK_SIZE_ZH = 500    # 中文：字符数
-CHUNK_OVERLAP  = 30    # overlap（词/字符，取小值）
+# ── 分块参数（子块用于向量化检索，父块用于拼 Prompt）──
+CHILD_CHUNK_ZH   = 280   # 子块：中文字符数
+CHILD_CHUNK_EN   = 480   # 子块：英文字符数
+CHUNK_OVERLAP_ZH = 55    # 滑动窗口重叠：中文字符（~19%）
+CHUNK_OVERLAP_EN = 90    # 滑动窗口重叠：英文字符（~18%）
+PARENT_WINDOW    = 3     # 父块 = 连续 N 个子块，检索命中后展开上下文
+# 旧常量保留，兼容 upload.py 等处的引用
+CHUNK_SIZE_EN = 200
+CHUNK_SIZE_ZH = 500
+CHUNK_OVERLAP  = 30
 
-# 检索参数
+# ── 检索参数 ──
 TOP_K        = 8       # 初次检索数量
 RERANK_TOP_K = 5       # Rerank 后保留数量
 
