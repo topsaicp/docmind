@@ -254,8 +254,8 @@ input,textarea{font-family:inherit}
   outline:none;transition:border-color .2s;width:100%}
 .review-topic-input:focus{border-color:rgba(201,168,76,.4)}
 .review-topic-input::placeholder{color:var(--muted)}
-.review-result{flex:1;overflow-y:auto;margin:0 24px 16px;background:var(--card);
-  border:1px solid var(--border);border-radius:8px;padding:16px;
+.review-result{flex:1;overflow-y:auto;margin:16px;background:var(--card);
+  border:1px solid var(--border);border-radius:8px;padding:16px 20px;
   font-size:.85rem;line-height:1.9;color:var(--fg);white-space:pre-wrap;min-height:100px}
 .review-empty-tip{color:var(--muted);text-align:center;padding:30px}
 
@@ -363,7 +363,7 @@ input,textarea{font-family:inherit}
 .cite-footer{display:flex;gap:8px;flex-shrink:0}
 
 /* ── Review layout ── */
-.review-layout{display:grid;grid-template-columns:246px 1fr;flex:1;overflow:hidden}
+.review-layout{display:grid;grid-template-columns:270px 1fr;flex:1;overflow:hidden}
 .rev-doc-panel{background:var(--panel);border-right:1px solid var(--border);
   display:flex;flex-direction:column;overflow:hidden}
 .rev-doc-header{padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0;
@@ -378,6 +378,15 @@ input,textarea{font-family:inherit}
   text-overflow:ellipsis;white-space:nowrap}
 .rev-badge{font-size:.6rem;padding:1px 5px;border-radius:3px;font-weight:600;flex-shrink:0}
 .rev-doc-empty{font-size:.78rem;color:var(--muted);text-align:center;padding:20px}
+.rev-controls{padding:12px 14px;border-top:1px solid var(--border);flex-shrink:0;
+  display:flex;flex-direction:column;gap:8px;background:rgba(255,255,255,.01)}
+.rev-controls-label{font-size:.68rem;color:var(--muted);font-weight:500}
+.rev-topic-input{width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);
+  border-radius:6px;padding:7px 10px;font-size:.8rem;color:var(--fg);
+  outline:none;transition:border-color .2s;font-family:inherit}
+.rev-topic-input:focus{border-color:rgba(201,168,76,.4)}
+.rev-topic-input::placeholder{color:var(--muted)}
+.rev-btn-row{display:flex;flex-wrap:wrap;gap:5px}
 .review-main{display:flex;flex-direction:column;overflow:hidden}
 
 @media(max-width:820px){
@@ -587,7 +596,7 @@ input,textarea{font-family:inherit}
         </div>
       </div>
       <div class="review-layout">
-        <!-- Left: doc selector -->
+        <!-- Left: doc selector + controls -->
         <div class="rev-doc-panel">
           <div class="rev-doc-header">
             选择文献（可多选）
@@ -596,21 +605,23 @@ input,textarea{font-family:inherit}
           <div class="rev-doc-list" id="revDocList">
             <div class="rev-doc-empty">暂无文献，请先上传</div>
           </div>
-        </div>
-        <!-- Right: review generation -->
-        <div class="review-main">
-          <div class="review-setup">
-            <input class="review-topic-input" id="reviewTopic" placeholder="综述主题（可选，不填则自动归纳）">
-            <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <!-- Controls below doc list -->
+          <div class="rev-controls">
+            <div class="rev-controls-label">综述主题（可选，不填则自动归纳）</div>
+            <input class="rev-topic-input" id="reviewTopic" placeholder="例：基于深度学习的医学图像分析">
+            <div class="rev-btn-row">
               <button class="abtn abtn-gold" onclick="startReview()">📝 生成综述</button>
-              <button class="abtn abtn-ghost" onclick="copyReview()">📋 复制全文</button>
-              <button class="abtn abtn-ghost" onclick="exportReview()">📥 导出 (.txt)</button>
-              <button class="abtn abtn-ghost" onclick="clearReview()">🗑 清空</button>
+              <button class="abtn abtn-ghost" onclick="copyReview()">📋 复制</button>
+              <button class="abtn abtn-ghost" onclick="exportReview()">📥 导出</button>
+              <button class="abtn abtn-ghost" onclick="clearReview()">🗑</button>
             </div>
-            <div id="reviewStatus" style="font-size:.75rem;color:var(--muted)"></div>
+            <div id="reviewStatus" style="font-size:.72rem;color:var(--muted);min-height:1em"></div>
           </div>
+        </div>
+        <!-- Right: result only -->
+        <div class="review-main">
           <div class="review-result" id="reviewResult">
-            <div class="review-empty-tip">从左侧勾选文献，点击「生成综述」开始自动撰写学术综述文本</div>
+            <div class="review-empty-tip">从左侧勾选文献并输入主题，点击「生成综述」开始自动撰写</div>
           </div>
         </div>
       </div>
