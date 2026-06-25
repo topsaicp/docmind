@@ -4,6 +4,7 @@ POST /api/ask            → 普通问答
 POST /api/ask/stream     → SSE 流式问答
 GET  /api/stats          → 知识库统计
 GET  /api/documents/{id}/sections → 某文档的章节列表
+GET  /api/documents/{id}/cite     → 提取文献元数据（引用格式用）
 """
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
@@ -13,9 +14,9 @@ from datetime import datetime
 import json
 
 from services.retriever import ask
-from services.embedder  import collection_count, get_doc_sections
-from db.database import get_session, User
-from config import FREE_QUERY_DAILY_LIMIT
+from services.embedder  import collection_count, get_doc_sections, get_doc_header
+from db.database import get_session, User, Document
+from config import FREE_QUERY_DAILY_LIMIT, DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, LLM_MODEL
 from routers.auth import get_current_user
 
 router = APIRouter(prefix="/api", tags=["query"])
@@ -89,3 +90,56 @@ def get_sections(doc_id: str, current_user: User = Depends(get_current_user)):
 @router.get("/stats")
 def get_stats(current_user: User = Depends(get_current_user)):
     return {"total_vectors": collection_count()}
+
+
+@router.get("/documents/{doc_id}/cite")
+def get_citation(
+    doc_id: str,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    doc = session.query(Document).filter_by(id=doc_id, user_id=current_user.id).first()
+    if not doc:
+        raise HTTPException(404, "文档不存在")
+
+    _fallback = {
+        "title": doc.original_name, "authors": [], "journal": "",
+        "year": "", "volume": "", "issue": "", "pages": "",
+        "doi": "", "publisher": "", "location": "", "type": "J",
+        "filename": doc.original_name,
+    }
+
+    chunks = get_doc_header(doc_id, n=6)
+    if not chunks:
+        return _fallback
+
+    header_text = "\n\n".join(c.get("text", "") for c in chunks)[:3500]
+
+    try:
+        import openai as _oa
+        client = _oa.OpenAI(api_key=DEEPSEEK_API_KEY, base_url=DEEPSEEK_BASE_URL)
+        resp = client.chat.completions.create(
+            model=LLM_MODEL,
+            messages=[{"role": "user", "content": (
+                "从以下学术文献首页内容中提取文献元数据，以严格JSON格式返回（无法提取的字段用空字符串，"
+                "authors 为作者姓名的字符串数组）。\n\n"
+                f"---\n{header_text}\n---\n\n"
+                '只返回JSON，无其他内容：\n'
+                '{"title":"","authors":[],"journal":"","year":"","volume":"",'
+                '"issue":"","pages":"","doi":"","publisher":"","location":"","type":"J"}\n\n'
+                "type: J=期刊论文 B=书籍 C=会议论文 D=学位论文"
+            )}],
+            temperature=0.1,
+            max_tokens=600,
+        )
+        raw = resp.choices[0].message.content.strip()
+        if "```" in raw:
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        meta = json.loads(raw.strip())
+        meta["filename"] = doc.original_name
+        return meta
+    except Exception as e:
+        _fallback["_note"] = f"元数据提取失败，请检查首页内容是否清晰：{e}"
+        return _fallback
