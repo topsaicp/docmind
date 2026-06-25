@@ -9,9 +9,32 @@ CHROMA_DIR   = BASE_DIR / "chroma_db"
 for d in [UPLOAD_DIR, MARKDOWN_DIR, CHROMA_DIR]:
     d.mkdir(exist_ok=True)
 
-# DeepSeek API
-DEEPSEEK_API_KEY  = os.getenv("DEEPSEEK_API_KEY", "")
-DEEPSEEK_BASE_URL = "https://api.deepseek.com"
+# ── API Keys ──────────────────────────────────────────────────────────
+DEEPSEEK_API_KEY  = os.getenv("DEEPSEEK_API_KEY",  "")
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")   # 预留：Claude
+OPENAI_API_KEY    = os.getenv("OPENAI_API_KEY",    "")   # 预留：GPT-4o
+
+DEEPSEEK_BASE_URL  = "https://api.deepseek.com"
+ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1"      # 预留
+OPENAI_BASE_URL    = "https://api.openai.com/v1"          # 预留
+
+# ── 多模型路由表 ───────────────────────────────────────────────────────
+# 每项格式: (api_key_env, base_url, model_id)
+# 当前：全部使用 DeepSeek 占位；接入新模型时只改此处，业务代码无需动
+MODEL_ROUTES: dict[str, tuple[str, str, str]] = {
+    # 任务          api_key           base_url              model_id
+    # -------------------------------------------------------------------
+    # 普通问答：速度优先，DeepSeek 中文能力强、成本低
+    "qa":       (DEEPSEEK_API_KEY,  DEEPSEEK_BASE_URL,  "deepseek-chat"),
+    # 多文档对比：目标换 claude-3-5-sonnet-20241022（长上下文 + 逻辑推理强）
+    "multi":    (DEEPSEEK_API_KEY,  DEEPSEEK_BASE_URL,  "deepseek-chat"),
+    # 文献综述：目标换 claude-3-5-sonnet-20241022（长文生成质量高）
+    "review":   (DEEPSEEK_API_KEY,  DEEPSEEK_BASE_URL,  "deepseek-chat"),
+    # 论文撰写：目标换 gpt-4o（学术写作风格好）
+    "writing":  (DEEPSEEK_API_KEY,  DEEPSEEK_BASE_URL,  "deepseek-chat"),
+    # 引用提取：轻量结构化任务，DeepSeek 足够
+    "cite":     (DEEPSEEK_API_KEY,  DEEPSEEK_BASE_URL,  "deepseek-chat"),
+}
 
 # Embedding 模型：英文为主混合场景用 BGE-M3
 JINA_API_KEY = os.getenv("JINA_API_KEY", "")
@@ -47,5 +70,5 @@ FREE_QUERY_DAILY_LIMIT = 20
 MAX_FILE_SIZE_MB = 50
 ALLOWED_EXT      = {".pdf"}
 
-# LLM 模型（DeepSeek）
-LLM_MODEL = "deepseek-chat"   # 或 deepseek-reasoner
+# 默认 LLM（仅用于路由表之外的兜底调用，如引用提取）
+LLM_MODEL = "deepseek-chat"

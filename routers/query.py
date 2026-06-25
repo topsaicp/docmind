@@ -35,10 +35,11 @@ def _check_and_count_query(user: User, session: Session):
 
 
 class AskRequest(BaseModel):
-    question: str
-    top_k:    int       = 5
-    doc_ids:  list[str] = []   # 空 = 全库；非空 = 指定文档
-    section:  str       = ""   # 非空 = 只检索该章节
+    question:  str
+    top_k:     int       = 5
+    doc_ids:   list[str] = []   # 空 = 全库；非空 = 指定文档
+    section:   str       = ""   # 非空 = 只检索该章节
+    task_hint: str       = ""   # 显式路由: qa / multi / review / writing / cite
 
 
 @router.post("/ask")
@@ -49,8 +50,9 @@ def ask_question(req: AskRequest, session: Session = Depends(get_session),
     _check_and_count_query(current_user, session)
     answer, sources = ask(
         req.question,
-        doc_ids = req.doc_ids or None,
-        section = req.section or None,
+        doc_ids   = req.doc_ids or None,
+        section   = req.section or None,
+        task_hint = req.task_hint,
     )
     return {"question": req.question, "answer": answer, "sources": sources}
 
@@ -62,12 +64,14 @@ def ask_stream(req: AskRequest, session: Session = Depends(get_session),
         return {"error": "问题不能为空"}
     _check_and_count_query(current_user, session)
 
-    doc_ids = req.doc_ids or None
-    section = req.section or None
+    doc_ids   = req.doc_ids or None
+    section   = req.section or None
+    task_hint = req.task_hint
 
     def event_generator():
         try:
-            gen = ask(req.question, stream=True, doc_ids=doc_ids, section=section)
+            gen = ask(req.question, stream=True,
+                      doc_ids=doc_ids, section=section, task_hint=task_hint)
             for chunk in gen:
                 if isinstance(chunk, dict):
                     yield f"data: {json.dumps({'type':'sources','sources':chunk['sources']}, ensure_ascii=False)}\n\n"

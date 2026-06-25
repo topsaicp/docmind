@@ -1178,7 +1178,7 @@ async function startReview(){
   let fullText='';
   try{
     const res=await authFetch(`${API}/api/ask/stream`,{method:'POST',
-      headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q,doc_ids:docIds,section:''})});
+      headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q,doc_ids:docIds,section:'',task_hint:'review'})});
     if(!res.ok) throw new Error(`HTTP ${res.status}`);
     const reader=res.body.getReader(),decoder=new TextDecoder();
     while(true){
@@ -1536,7 +1536,7 @@ async function generateSection(id){
   ta.value=''; autoResizeWs(ta);
   try{
     const res=await authFetch(`${API}/api/ask/stream`,{method:'POST',
-      headers:{'Content-Type':'application/json'},body:JSON.stringify({question:prompt,doc_ids:docIds,section:''})});
+      headers:{'Content-Type':'application/json'},body:JSON.stringify({question:prompt,doc_ids:docIds,section:'',task_hint:'writing'})});
     if(!res.ok) throw new Error(`HTTP ${res.status}`);
     const reader=res.body.getReader(),decoder=new TextDecoder();
     let text='',rafPending=false;

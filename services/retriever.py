@@ -3,10 +3,28 @@
 支持：自由问答 / 章节定向检索 / 多文档并行分析
 """
 from openai import OpenAI
-from config import DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, LLM_MODEL, TOP_K
+from config import MODEL_ROUTES, TOP_K
 from services.embedder import search, get_doc_sections, get_doc_header, expand_hits_to_parent
 
-_client = None
+# 每个任务类型独立缓存一个 OpenAI-compatible client
+_clients: dict[str, OpenAI] = {}
+
+
+def _router(task: str) -> tuple[OpenAI, str]:
+    """
+    根据任务类型返回 (client, model_id)。
+    路由表在 config.MODEL_ROUTES 中集中维护：
+      "qa"      → 普通问答
+      "multi"   → 多文档对比
+      "review"  → 文献综述
+      "writing" → 论文撰写
+      "cite"    → 引用元数据提取
+    未知任务降级到 "qa"。
+    """
+    key, base_url, model_id = MODEL_ROUTES.get(task, MODEL_ROUTES["qa"])
+    if task not in _clients:
+        _clients[task] = OpenAI(api_key=key, base_url=base_url)
+    return _clients[task], model_id
 
 # ── 章节关键词映射 ─────────────────────────────────────────────────────
 _SECTION_KEYWORDS: list[tuple[str, str]] = [
@@ -221,30 +239,39 @@ def build_multi_doc_context(per_doc_hits: dict[str, list[dict]]) -> tuple[str, l
 
 # ── RAG 问答主入口 ─────────────────────────────────────────────────────
 def ask(
-    question: str,
-    stream:   bool = False,
-    doc_ids:  list[str] | None = None,
-    section:  str | None = None,
+    question:  str,
+    stream:    bool = False,
+    doc_ids:   list[str] | None = None,
+    section:   str | None = None,
+    task_hint: str = "",          # 前端显式传入任务类型，优先于关键词自动检测
 ):
-    # ── 模式判断 ──
-    is_review = _is_review_request(question) and doc_ids and len(doc_ids) >= 1
-    is_multi  = _is_multi_doc_overview(question, doc_ids) and not is_review
+    # ── 任务类型解析（显式 task_hint 优先；否则关键词自动检测）──
+    if task_hint in ("qa", "multi", "review", "writing", "cite"):
+        task = task_hint
+        # task_hint 为 "review"/"writing" 时仍走对应的检索路径
+        is_review = task in ("review",) and doc_ids and len(doc_ids) >= 1
+        is_multi  = task == "multi" and doc_ids and len(doc_ids) >= 2
+    else:
+        is_review = _is_review_request(question) and doc_ids and len(doc_ids) >= 1
+        is_multi  = _is_multi_doc_overview(question, doc_ids) and not is_review
+        task = "review" if is_review else ("multi" if is_multi else "qa")
 
+    # ── 获取当前任务对应的 LLM 客户端和模型 ──
+    client, model_id = _router(task)
+
+    # ── Prompt 构建 ───────────────────────────────────────────────────
     if is_review:
-        # ── 综述模式：大量抽块 + 首页元信息 + 学术写作提示词 ──
         target_ids = doc_ids if doc_ids else []
         per_doc    = retrieve_per_doc_for_review(question, target_ids, chunks_per_doc=12)
         context, sources = build_multi_doc_context(per_doc)
         doc_count  = len([v for v in per_doc.values() if v])
 
-        # 收集每篇论文首页文本（含作者/标题/年份/期刊信息）
         header_parts = []
         for idx, doc_id in enumerate(target_ids, 1):
             headers = get_doc_header(doc_id, n=3)
             if headers:
                 header_text = "\n".join(h["text"] for h in headers)
-                filename    = headers[0]["filename"]
-                header_parts.append(f"[{idx}] 文件：{filename}\n{header_text}")
+                header_parts.append(f"[{idx}] 文件：{headers[0]['filename']}\n{header_text}")
         headers_block = "\n\n---\n\n".join(header_parts)
 
         prompt = f"""你是一位资深学术写作专家。请基于以下 {doc_count} 篇文献的内容，撰写一篇规范的学术文献综述。
@@ -263,9 +290,7 @@ def ask(
 
 【参考文献】
 - 正文结束后，另起一行写"参考文献"作为标题
-- 根据下方每篇论文的首页信息（含作者、标题、年份、期刊等），按 APA 第7版格式逐条列出
-- APA格式示例：Author, A., & Author, B. (Year). Title of article. Journal Name, Volume(Issue), Pages. https://doi.org/xxxxx
-- 编号与正文中的引用编号对应，按出现顺序排列
+- 按 APA 第7版格式逐条列出，编号与正文引用编号对应
 
 ══════════════════════════════════════
 各篇论文首页信息（用于提取APA参考文献）：
@@ -278,7 +303,6 @@ def ask(
 用户要求：{question}"""
 
     elif is_multi:
-        # ── 多文档对比分析模式 ──
         per_doc = retrieve_per_doc(question, doc_ids, chunks_per_doc=4)
         context, sources = build_multi_doc_context(per_doc)
         doc_count = len([v for v in per_doc.values() if v])
@@ -295,20 +319,30 @@ def ask(
 
 用户请求：{question}"""
 
-    else:
-        # ── 常规单文档/章节检索模式 ──
-        hits = retrieve(question, doc_ids=doc_ids, section=section)
-        # 父块展开：将每个子块命中扩展为前后各 1 块的完整上下文
-        # 让 DeepSeek 看到更完整的原文，减少断章取义和幻觉
+    elif task == "writing":
+        # 论文撰写：前端已构造好结构化 Prompt，直接检索并生成
+        hits    = retrieve(question, doc_ids=doc_ids, section=section)
         hits    = expand_hits_to_parent(hits, window=1)
         context = build_context(hits)
-        sources = [
-            {"filename": h["filename"], "score": h["score"], "section": h.get("section", "")}
-            for h in hits
-        ]
-        task_hint = f'用户当前正在阅读【{section}】章节，请围绕该章节内容深度解读。' if section \
-                    else '请根据参考文档内容精准回答用户问题。'
-        prompt = f"""你是专业学术文献助手。{task_hint}
+        sources = [{"filename": h["filename"], "score": h["score"],
+                    "section": h.get("section", "")} for h in hits]
+        prompt = f"""你是专业学术写作助手，请严格按照指示完成写作任务。
+
+参考文献内容：
+{context}
+
+写作指令：{question}"""
+
+    else:
+        # 常规问答 / 章节精读
+        hits    = retrieve(question, doc_ids=doc_ids, section=section)
+        hits    = expand_hits_to_parent(hits, window=1)
+        context = build_context(hits)
+        sources = [{"filename": h["filename"], "score": h["score"],
+                    "section": h.get("section", "")} for h in hits]
+        qa_hint = (f'用户当前正在阅读【{section}】章节，请围绕该章节内容深度解读。'
+                   if section else '请根据参考文档内容精准回答用户问题。')
+        prompt = f"""你是专业学术文献助手。{qa_hint}
 
 规则：
 - 只使用下方参考文档中的内容，不引入外部知识
@@ -321,19 +355,17 @@ def ask(
 
 用户问题：{question}"""
 
-    # ── 调用 LLM ──
-    client = _get_client()
-
+    # ── 调用 LLM（统一入口，client 和 model_id 由路由决定）──
     if not stream:
         resp = client.chat.completions.create(
-            model=LLM_MODEL, max_tokens=4096,
+            model=model_id, max_tokens=4096,
             messages=[{"role": "user", "content": prompt}],
         )
         return resp.choices[0].message.content, sources
 
-    def _stream_gen(p=prompt, s=sources):
-        resp = client.chat.completions.create(
-            model=LLM_MODEL, max_tokens=4096,
+    def _stream_gen(p=prompt, s=sources, c=client, m=model_id):
+        resp = c.chat.completions.create(
+            model=m, max_tokens=4096,
             messages=[{"role": "user", "content": p}],
             stream=True,
         )
@@ -344,10 +376,3 @@ def ask(
         yield {"sources": s}
 
     return _stream_gen()
-
-
-def _get_client():
-    global _client
-    if _client is None:
-        _client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url=DEEPSEEK_BASE_URL)
-    return _client
