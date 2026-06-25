@@ -348,6 +348,29 @@ input, textarea { font-family: inherit; }
 .pay-close { position: absolute; top: 14px; right: 16px; background: none; border: none;
              cursor: pointer; color: var(--muted); font-size: 1.2rem; }
 
+/* Legal modal */
+#legal-modal { display: none; position: fixed; inset: 0; z-index: 600;
+               background: rgba(0,0,0,.82); backdrop-filter: blur(6px);
+               align-items: flex-start; justify-content: center; padding: 32px 16px; overflow-y: auto; }
+#legal-modal.show { display: flex; }
+.legal-box { background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+             max-width: 740px; width: 100%; position: relative; padding: 36px 40px 40px; }
+.legal-close { position: absolute; top: 14px; right: 16px; background: none; border: none;
+               cursor: pointer; color: var(--muted); font-size: 1.2rem; }
+.legal-box h2 { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 700;
+                color: var(--fg); margin-bottom: 6px; }
+.legal-box .legal-date { font-size: .72rem; color: var(--muted); margin-bottom: 28px; }
+.legal-box h3 { font-size: .82rem; font-weight: 700; color: var(--gold); margin: 22px 0 8px;
+                text-transform: uppercase; letter-spacing: .06em; }
+.legal-box p, .legal-box li { font-size: .84rem; color: rgba(232,228,216,.8); line-height: 1.9; }
+.legal-box ul { padding-left: 1.2em; display: flex; flex-direction: column; gap: 4px; }
+.legal-box a { color: var(--gold); }
+.legal-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 28px; }
+.legal-tab { flex: 1; background: none; border: none; padding: 9px 0; font-size: .84rem;
+             color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent;
+             transition: all .2s; font-family: inherit; }
+.legal-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+
 /* Auth modal */
 #auth-modal { display: none; position: fixed; inset: 0; z-index: 500;
               background: rgba(0,0,0,.75); backdrop-filter: blur(6px);
@@ -726,8 +749,8 @@ input, textarea { font-family: inherit; }
       <div>
         <div class="footer-col-title">法律</div>
         <ul class="footer-col-links">
-          <li><a href="#">隐私政策</a></li>
-          <li><a href="#">服务条款</a></li>
+          <li><a href="#" onclick="openLegal('privacy');return false">隐私政策</a></li>
+          <li><a href="#" onclick="openLegal('terms');return false">用户服务条款</a></li>
         </ul>
       </div>
     </div>
@@ -819,6 +842,28 @@ document.getElementById('pay-modal').addEventListener('click',e=>{if(e.target===
 
 function toggleFaq(btn){btn.closest('.faq-item').classList.toggle('open');}
 
+// ── Legal modal ───────────────────────────────────────────────
+let _legalTab='privacy';
+function openLegal(tab){
+  _legalTab = tab||'privacy';
+  _switchLegalTab(_legalTab);
+  document.getElementById('legal-modal').classList.add('show');
+  document.getElementById('legal-modal').scrollTop = 0;
+}
+function closeLegal(){ document.getElementById('legal-modal').classList.remove('show'); }
+function _switchLegalTab(tab){
+  _legalTab=tab;
+  document.getElementById('ltab-privacy').classList.toggle('active',tab==='privacy');
+  document.getElementById('ltab-terms').classList.toggle('active',tab==='terms');
+  document.getElementById('legal-privacy').style.display = tab==='privacy'?'block':'none';
+  document.getElementById('legal-terms').style.display   = tab==='terms'?'block':'none';
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('legal-modal').addEventListener('click',e=>{
+    if(e.target===document.getElementById('legal-modal')) closeLegal();
+  });
+});
+
 // ── Init ─────────────────────────────────────────────────────
 (async()=>{
   const tok=localStorage.getItem('auth_token');
@@ -831,5 +876,146 @@ function toggleFaq(btn){btn.closest('.faq-item').classList.toggle('open');}
   }catch{updateNavbar(null);}
 })();
 </script>
+
+<!-- ═══ LEGAL MODAL ══════════════════════════════════════════ -->
+<div id="legal-modal">
+  <div class="legal-box">
+    <button class="legal-close" onclick="closeLegal()">✕</button>
+    <h2>法律文件</h2>
+    <div class="legal-date">最后更新：2026年06月25日</div>
+    <div class="legal-tabs">
+      <button class="legal-tab active" id="ltab-privacy" onclick="_switchLegalTab('privacy')">隐私政策</button>
+      <button class="legal-tab" id="ltab-terms" onclick="_switchLegalTab('terms')">用户服务条款</button>
+    </div>
+
+    <!-- Privacy Policy -->
+    <div id="legal-privacy">
+      <h3>总则</h3>
+      <p>DocMind（以下简称"我们"）重视您的隐私。本隐私政策说明我们在您使用 <strong>DocMind</strong> 平台（https://docmindai.up.railway.app/）时收集、使用和保护您的信息的方式。使用本服务即表示您同意本政策的条款。</p>
+
+      <h3>我们收集的信息</h3>
+      <ul>
+        <li><strong>账户信息</strong>：注册时的邮箱地址及加密后的密码（SHA-256 + 随机盐哈希存储，原始密码不可恢复）。</li>
+        <li><strong>上传内容</strong>：您上传的 PDF 文件。文件内容经提取后以向量索引形式存储，用于 AI 检索服务。原始文件暂存于服务器，删除文档时同步清除。</li>
+        <li><strong>使用数据</strong>：每日问答次数、文档数量，用于执行套餐限额。</li>
+        <li><strong>问答历史</strong>：存储于您本地浏览器的 localStorage，不上传至服务器，清除浏览器数据即可删除。</li>
+      </ul>
+
+      <h3>信息使用目的</h3>
+      <ul>
+        <li>提供 AI 知识库问答、文献综述、论文撰写及降率处理服务</li>
+        <li>执行免费/付费套餐限额及计费管理</li>
+        <li>向您发送服务相关通知（如重大政策变更）</li>
+        <li>分析匿名使用数据以改进产品</li>
+      </ul>
+
+      <h3>数据存储与安全</h3>
+      <ul>
+        <li><strong>账户数据库</strong>：PostgreSQL，托管于 Supabase（节点位于美国西部）</li>
+        <li><strong>向量索引</strong>：Chroma 向量数据库，存储于 Railway 服务器（美国）</li>
+        <li><strong>问答历史</strong>：仅存于用户本地浏览器（localStorage），服务器不保留</li>
+        <li><strong>传输安全</strong>：所有 API 通信均通过 HTTPS/TLS 加密</li>
+        <li><strong>密码安全</strong>：使用 SHA-256 + 随机盐哈希存储，平台无法还原明文密码</li>
+      </ul>
+
+      <h3>第三方服务</h3>
+      <p>为提供服务，我们使用以下第三方工具，它们可能处理您的部分数据：</p>
+      <ul>
+        <li><strong>DeepSeek AI</strong>（北京深度求索人工智能基础技术研究有限公司）— 提供大语言模型推理服务；您的文档检索内容和问题会发送至其 API</li>
+        <li><strong>Jina AI</strong>（德国柏林）— 提供文本向量化（Embedding）服务</li>
+        <li><strong>Railway</strong>（美国）— 应用服务器托管</li>
+        <li><strong>Supabase</strong>（美国/新加坡）— PostgreSQL 数据库托管</li>
+      </ul>
+
+      <h3>本地存储（Cookie 替代）</h3>
+      <p>我们使用浏览器 <code>localStorage</code> 存储登录凭证（JWT Token），用于保持登录状态，不设置第三方追踪 Cookie，也不使用任何广告追踪技术。</p>
+
+      <h3>数据保留与删除</h3>
+      <ul>
+        <li>您可随时在工作台「账号」页面删除账号，账号删除后，我们将在 30 天内删除您的全部数据（向量索引、账户记录）。</li>
+        <li>如需在删除账号前导出数据，请发邮件至 <a href="mailto:njjimchen@protonmail.com">njjimchen@protonmail.com</a>。</li>
+      </ul>
+
+      <h3>未成年人保护</h3>
+      <p>本服务不面向 18 周岁以下未成年人。若发现未成年人提供个人信息，我们将立即删除相关数据。</p>
+
+      <h3>政策变更</h3>
+      <p>我们可能不定期更新本隐私政策。重大变更将通过邮件或平台公告提前告知。继续使用服务即视为同意更新后的政策。</p>
+
+      <h3>联系我们</h3>
+      <p>如有隐私相关问题，请联系：<a href="mailto:njjimchen@protonmail.com">njjimchen@protonmail.com</a></p>
+    </div>
+
+    <!-- Terms of Service -->
+    <div id="legal-terms" style="display:none">
+      <h3>服务说明</h3>
+      <p>DocMind 是一款面向学术研究者和学生的 AI 辅助工具，提供 PDF 知识库问答、文献综述生成、论文章节撰写及英文降率处理功能。本服务按"现状"提供，具体功能以平台实际可用状态为准。</p>
+
+      <h3>用户资格</h3>
+      <ul>
+        <li>您须年满 18 周岁方可注册并使用本服务。</li>
+        <li>您须提供真实有效的电子邮箱地址进行注册。</li>
+        <li>一人仅可持有一个账号；禁止创建多个账号规避使用限额。</li>
+      </ul>
+
+      <h3>账户安全</h3>
+      <p>您负责保管账户登录凭证的安全。如发现账户被未经授权使用，请立即联系我们。因您的凭证保管不当导致的损失，我们不承担责任。</p>
+
+      <h3>可接受使用</h3>
+      <ul>
+        <li>本服务仅限合法的学术研究、文献阅读及写作辅助目的。</li>
+        <li>禁止上传涉及版权纠纷、国家机密、个人隐私或其他违法的文件内容。</li>
+        <li>禁止利用本服务进行任何形式的欺诈、恶意攻击或违法活动。</li>
+        <li>禁止使用自动化手段（爬虫、脚本）批量访问本服务。</li>
+        <li>禁止转售、分享账号或以商业用途转售 AI 生成内容（除非另有书面许可）。</li>
+      </ul>
+
+      <h3>AI 内容免责声明</h3>
+      <p>平台所有 AI 生成内容（问答、综述、章节草稿、降率结果）仅供参考，不构成专业法律、医疗或学术认证建议。AI 可能产生错误、过时或不准确的输出。<strong>您在学术提交前须自行审核和修改 AI 生成内容，并对最终提交内容负全责。</strong></p>
+
+      <h3>降率工具使用条款</h3>
+      <ul>
+        <li>降率工具（降AI率、降重复率）仅用于辅助合法的学术写作润色与语言改进。</li>
+        <li>本工具不得用于帮助伪造研究成果、规避学校诚信政策或从事学术不端行为。</li>
+        <li>退款保障条件（AI率超20%/重复率超15%）以提交 Turnitin 官方报告截图为依据，由人工审核。</li>
+        <li>人工服务退款须在交付后 <strong>72 小时内</strong>提出，逾期不予受理。</li>
+      </ul>
+
+      <h3>知识产权</h3>
+      <ul>
+        <li>您上传的 PDF 文件及其内容的版权归您或原著作权人所有，DocMind 仅获得提供服务所必需的有限授权。</li>
+        <li>AI 生成内容的版权归属由您自行判断；平台对生成内容不主张任何版权。</li>
+        <li>DocMind 名称、标志及产品界面属于我们的知识产权，未经授权不得复制或使用。</li>
+      </ul>
+
+      <h3>套餐与计费</h3>
+      <ul>
+        <li><strong>免费版</strong>：每日 20 次问答，最多上传 5 篇文献，所有功能可用。</li>
+        <li><strong>专业版</strong>：不限问答次数，最多 50 篇文献，优先处理队列。</li>
+        <li><strong>机构版</strong>：多人共享，企业账单，详询客服。</li>
+        <li>付费订阅按月自动续费（现阶段为手动支付），可随时取消续订。</li>
+      </ul>
+
+      <h3>退款政策</h3>
+      <ul>
+        <li>首次订阅专业版后 <strong>7 日内</strong>如不满意，可申请全额退款（每账号限一次）。</li>
+        <li>降率人工服务退款见「降率工具使用条款」。</li>
+        <li>退款申请请发送至：<a href="mailto:njjimchen@protonmail.com">njjimchen@protonmail.com</a></li>
+      </ul>
+
+      <h3>服务变更与终止</h3>
+      <p>我们保留随时修改、暂停或终止部分或全部服务的权利，重大变更将提前 14 天通知。如因违反本条款，我们有权立即终止您的账号。</p>
+
+      <h3>责任限制</h3>
+      <p>在适用法律允许的最大范围内，DocMind 对因使用或无法使用本服务所造成的间接、偶然或后果性损失不承担责任。我们对单一事件的最大赔偿责任不超过您在过去 12 个月内支付的订阅费用。</p>
+
+      <h3>适用法律</h3>
+      <p>本条款受中华人民共和国法律管辖。如发生争议，双方应首先协商解决；协商不成的，提交北京市有管辖权的人民法院裁决。</p>
+
+      <h3>联系我们</h3>
+      <p>如有服务条款相关问题，请联系：<a href="mailto:njjimchen@protonmail.com">njjimchen@protonmail.com</a></p>
+    </div>
+  </div>
+</div>
 </body>
 </html>
