@@ -28,8 +28,9 @@ def _check_and_count_query(user: User, session: Session):
     if db_user.query_date != today:
         db_user.query_count_today = 0
         db_user.query_date        = today
-    if db_user.plan == "free" and db_user.query_count_today >= FREE_QUERY_DAILY_LIMIT:
-        raise HTTPException(403, f"今日提问次数已达上限（{FREE_QUERY_DAILY_LIMIT}次），请明天再来或升级专业版")
+    # 每日提问次数限制（测试期间暂停）
+    # if db_user.plan == "free" and db_user.query_count_today >= FREE_QUERY_DAILY_LIMIT:
+    #     raise HTTPException(403, f"今日提问次数已达上限（{FREE_QUERY_DAILY_LIMIT}次），请明天再来或升级专业版")
     db_user.query_count_today += 1
     session.commit()
 

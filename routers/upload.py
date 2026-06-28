@@ -57,11 +57,11 @@ async def upload_pdf(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-    # 免费用户 PDF 数量限制
-    if current_user.plan == "free":
-        db_user = session.query(User).filter_by(id=current_user.id).first()
-        if db_user.pdf_count >= FREE_PDF_LIMIT:
-            raise HTTPException(403, f"免费用户最多上传 {FREE_PDF_LIMIT} 篇 PDF，请升级专业版")
+    # 免费用户 PDF 数量限制（测试期间暂停）
+    # if current_user.plan == "free":
+    #     db_user = session.query(User).filter_by(id=current_user.id).first()
+    #     if db_user.pdf_count >= FREE_PDF_LIMIT:
+    #         raise HTTPException(403, f"免费用户最多上传 {FREE_PDF_LIMIT} 篇 PDF，请升级专业版")
 
     # 格式校验
     suffix = Path(file.filename).suffix.lower()
