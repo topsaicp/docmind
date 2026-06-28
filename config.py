@@ -10,30 +10,32 @@ for d in [UPLOAD_DIR, MARKDOWN_DIR, CHROMA_DIR]:
     d.mkdir(exist_ok=True)
 
 # ── API Keys ──────────────────────────────────────────────────────────
-DEEPSEEK_API_KEY  = os.getenv("DEEPSEEK_API_KEY",  "")
+GROQ_API_KEY      = os.getenv("GROQ_API_KEY",      "")
+DEEPSEEK_API_KEY  = os.getenv("DEEPSEEK_API_KEY",  "")   # 备用
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")   # 预留：Claude
 OPENAI_API_KEY    = os.getenv("OPENAI_API_KEY",    "")   # 预留：GPT-4o
 
+GROQ_BASE_URL      = "https://api.groq.com/openai/v1"
 DEEPSEEK_BASE_URL  = "https://api.deepseek.com"
-ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1"      # 预留
-OPENAI_BASE_URL    = "https://api.openai.com/v1"          # 预留
+ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1"
+OPENAI_BASE_URL    = "https://api.openai.com/v1"
 
 # ── 多模型路由表 ───────────────────────────────────────────────────────
-# 每项格式: (api_key_env, base_url, model_id)
-# 当前：全部使用 DeepSeek 占位；接入新模型时只改此处，业务代码无需动
+# 每项格式: (api_key, base_url, model_id)
+# 当前：全部使用 Groq；接入新模型时只改此处，业务代码无需动
 MODEL_ROUTES: dict[str, tuple[str, str, str]] = {
-    # 任务          api_key           base_url              model_id
+    # 任务          api_key        base_url           model_id
     # -------------------------------------------------------------------
-    # 普通问答：速度优先，DeepSeek 中文能力强、成本低
-    "qa":       (DEEPSEEK_API_KEY,  DEEPSEEK_BASE_URL,  "deepseek-chat"),
-    # 多文档对比：目标换 claude-3-5-sonnet-20241022（长上下文 + 逻辑推理强）
-    "multi":    (DEEPSEEK_API_KEY,  DEEPSEEK_BASE_URL,  "deepseek-chat"),
-    # 文献综述：目标换 claude-3-5-sonnet-20241022（长文生成质量高）
-    "review":   (DEEPSEEK_API_KEY,  DEEPSEEK_BASE_URL,  "deepseek-chat"),
-    # 论文撰写：目标换 gpt-4o（学术写作风格好）
-    "writing":  (DEEPSEEK_API_KEY,  DEEPSEEK_BASE_URL,  "deepseek-chat"),
-    # 引用提取：轻量结构化任务，DeepSeek 足够
-    "cite":     (DEEPSEEK_API_KEY,  DEEPSEEK_BASE_URL,  "deepseek-chat"),
+    # 普通问答：Groq 速度快，llama-3.3-70b 中英文能力强
+    "qa":       (GROQ_API_KEY,  GROQ_BASE_URL,  "llama-3.3-70b-versatile"),
+    # 多文档对比：长上下文推理
+    "multi":    (GROQ_API_KEY,  GROQ_BASE_URL,  "llama-3.3-70b-versatile"),
+    # 文献综述：长文生成
+    "review":   (GROQ_API_KEY,  GROQ_BASE_URL,  "llama-3.3-70b-versatile"),
+    # 降率写作：流式改写
+    "writing":  (GROQ_API_KEY,  GROQ_BASE_URL,  "llama-3.3-70b-versatile"),
+    # 引用提取：轻量结构化任务
+    "cite":     (GROQ_API_KEY,  GROQ_BASE_URL,  "llama-3.3-70b-versatile"),
 }
 
 # Embedding 模型：英文为主混合场景用 BGE-M3
@@ -70,5 +72,5 @@ FREE_QUERY_DAILY_LIMIT = 20
 MAX_FILE_SIZE_MB = 50
 ALLOWED_EXT      = {".pdf"}
 
-# 默认 LLM（仅用于路由表之外的兜底调用，如引用提取）
-LLM_MODEL = "deepseek-chat"
+# 默认 LLM（仅用于路由表之外的兜底调用）
+LLM_MODEL = "llama-3.3-70b-versatile"

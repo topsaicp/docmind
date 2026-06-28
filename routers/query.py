@@ -16,7 +16,7 @@ import json
 from services.retriever import ask
 from services.embedder  import collection_count, get_doc_sections, get_doc_header
 from db.database import get_session, User, Document
-from config import FREE_QUERY_DAILY_LIMIT, DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, LLM_MODEL
+from config import FREE_QUERY_DAILY_LIMIT, MODEL_ROUTES, LLM_MODEL
 from routers.auth import get_current_user
 
 router = APIRouter(prefix="/api", tags=["query"])
@@ -121,7 +121,8 @@ def get_citation(
 
     try:
         import openai as _oa
-        client = _oa.OpenAI(api_key=DEEPSEEK_API_KEY, base_url=DEEPSEEK_BASE_URL)
+        _key, _base, _ = MODEL_ROUTES["cite"]
+        client = _oa.OpenAI(api_key=_key, base_url=_base)
         resp = client.chat.completions.create(
             model=LLM_MODEL,
             messages=[{"role": "user", "content": (
