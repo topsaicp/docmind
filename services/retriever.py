@@ -5,28 +5,32 @@
 import urllib.parse
 import requests as _requests
 from openai import OpenAI
-from config import MODEL_ROUTES, TOP_K, JINA_API_KEY
+from config import MODEL_ROUTES, MODEL_FALLBACK, TOP_K, JINA_API_KEY
 from services.embedder import search, get_doc_sections, get_doc_header, expand_hits_to_parent
 
-# 每个任务类型独立缓存一个 OpenAI-compatible client
-_clients: dict[str, OpenAI] = {}
+_clients: dict[str, OpenAI] = {}   # 主路由 client 缓存
+_fb_clients: dict[str, OpenAI] = {}  # 备用路由 client 缓存
 
 
 def _router(task: str) -> tuple[OpenAI, str]:
-    """
-    根据任务类型返回 (client, model_id)。
-    路由表在 config.MODEL_ROUTES 中集中维护：
-      "qa"      → 普通问答
-      "multi"   → 多文档对比
-      "review"  → 文献综述
-      "writing" → 论文撰写
-      "cite"    → 引用元数据提取
-    未知任务降级到 "qa"。
-    """
     key, base_url, model_id = MODEL_ROUTES.get(task, MODEL_ROUTES["qa"])
     if task not in _clients:
         _clients[task] = OpenAI(api_key=key, base_url=base_url)
     return _clients[task], model_id
+
+
+def _fallback_router(task: str) -> tuple[OpenAI, str] | None:
+    fb = MODEL_FALLBACK.get(task)
+    if not fb:
+        return None
+    key, base_url, model_id = fb
+    if task not in _fb_clients:
+        _fb_clients[task] = OpenAI(api_key=key, base_url=base_url)
+    return _fb_clients[task], model_id
+
+
+def _is_rate_limit(e: Exception) -> bool:
+    return "429" in str(e) or "rate_limit" in str(e)
 
 # ── 章节关键词映射 ─────────────────────────────────────────────────────
 _SECTION_KEYWORDS: list[tuple[str, str]] = [
@@ -403,37 +407,54 @@ def ask(
     trimmed_hist = hist[-6:] if len(hist) > 6 else hist
     messages = trimmed_hist + [{"role": "user", "content": prompt}]
 
-    # ── 调用 LLM ──────────────────────────────────────────────────────
+    # ── 调用 LLM（主路由失败自动降级备用）──────────────────────────────
     if not stream:
         try:
             resp = client.chat.completions.create(
-                model=model_id, max_tokens=4096,
-                messages=messages,
+                model=model_id, max_tokens=4096, messages=messages,
             )
             return resp.choices[0].message.content, sources
         except Exception as e:
-            msg = str(e)
-            if "429" in msg or "rate_limit" in msg:
-                raise RuntimeError("模型调用频率超限，请稍等几分钟后重试（Groq 免费版每日 Token 有上限）")
+            if _is_rate_limit(e):
+                fb = _fallback_router(task)
+                if fb:
+                    fc, fm = fb
+                    resp = fc.chat.completions.create(
+                        model=fm, max_tokens=4096, messages=messages,
+                    )
+                    return resp.choices[0].message.content, sources
             raise
 
-    def _stream_gen(msgs=messages, s=sources, c=client, m=model_id):
+    def _stream_gen(msgs=messages, s=sources, c=client, m=model_id, t=task):
         try:
             resp = c.chat.completions.create(
-                model=m, max_tokens=4096,
-                messages=msgs,
-                stream=True,
+                model=m, max_tokens=4096, messages=msgs, stream=True,
             )
             for chunk in resp:
                 delta = chunk.choices[0].delta.content
                 if delta:
                     yield delta
         except Exception as e:
-            msg = str(e)
-            if "429" in msg or "rate_limit" in msg:
-                yield "⚠️ 模型调用频率超限，请稍等几分钟后重试（Groq 免费版每日 Token 有上限）"
+            if _is_rate_limit(e):
+                fb = _fallback_router(t)
+                if fb:
+                    fc, fm = fb
+                    try:
+                        resp2 = fc.chat.completions.create(
+                            model=fm, max_tokens=4096, messages=msgs, stream=True,
+                        )
+                        for chunk in resp2:
+                            delta = chunk.choices[0].delta.content
+                            if delta:
+                                yield delta
+                        yield {"sources": s}
+                        return
+                    except Exception as e2:
+                        yield f"❌ 主备模型均失败：{e2}"
+                        return
+                yield "⚠️ 调用频率超限，请稍等片刻后重试"
             else:
-                yield f"❌ LLM 调用失败：{msg}"
+                yield f"❌ LLM 调用失败：{e}"
             return
         yield {"sources": s}
 

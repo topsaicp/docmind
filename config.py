@@ -24,17 +24,21 @@ OPENAI_BASE_URL    = "https://api.openai.com/v1"
 # 每项格式: (api_key, base_url, model_id)
 # 当前：全部使用 Groq；接入新模型时只改此处，业务代码无需动
 MODEL_ROUTES: dict[str, tuple[str, str, str]] = {
-    # 任务          api_key        base_url           model_id
+    # 任务          api_key              base_url             model_id
     # -------------------------------------------------------------------
-    # 普通问答：llama-3.1-8b-instant 速度极快，TPD 500万（免费）
+    "qa":       (DEEPSEEK_API_KEY,  DEEPSEEK_BASE_URL,  "deepseek-chat"),
+    "multi":    (DEEPSEEK_API_KEY,  DEEPSEEK_BASE_URL,  "deepseek-chat"),
+    "review":   (DEEPSEEK_API_KEY,  DEEPSEEK_BASE_URL,  "deepseek-chat"),
+    "writing":  (GROQ_API_KEY,      GROQ_BASE_URL,      "llama-3.3-70b-versatile"),
+    "cite":     (DEEPSEEK_API_KEY,  DEEPSEEK_BASE_URL,  "deepseek-chat"),
+}
+
+# 429/限流时自动降级到此备用路由
+MODEL_FALLBACK: dict[str, tuple[str, str, str]] = {
     "qa":       (GROQ_API_KEY,  GROQ_BASE_URL,  "llama-3.1-8b-instant"),
-    # 多文档对比
     "multi":    (GROQ_API_KEY,  GROQ_BASE_URL,  "llama-3.1-8b-instant"),
-    # 文献综述：长文生成（需要更强模型时换回 llama-3.3-70b-versatile）
     "review":   (GROQ_API_KEY,  GROQ_BASE_URL,  "llama-3.3-70b-versatile"),
-    # 降率写作：流式改写（英文能力要求高，保留 70b）
-    "writing":  (GROQ_API_KEY,  GROQ_BASE_URL,  "llama-3.3-70b-versatile"),
-    # 引用提取：轻量任务
+    "writing":  (DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, "deepseek-chat"),
     "cite":     (GROQ_API_KEY,  GROQ_BASE_URL,  "llama-3.1-8b-instant"),
 }
 
