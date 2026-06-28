@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DocMind · 工作台</title>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Noto+Sans+SC:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -203,10 +204,16 @@ input,textarea{font-family:inherit}
 .pdfchat-sec-label{font-size:.65rem;color:var(--muted);padding:4px 14px 6px;letter-spacing:.06em;text-transform:uppercase}
 .pdfchat-sec-btn{width:100%;text-align:left;background:none;border:none;color:rgba(255,255,255,.7);font-size:.77rem;padding:7px 14px;cursor:pointer;transition:all .15s;display:block}
 .pdfchat-sec-btn:hover{background:rgba(255,255,255,.05);color:var(--gold)}
-.pdfchat-viewer{display:flex;flex-direction:column;border-right:1px solid var(--border);overflow:hidden;background:#fff}
+.pdfchat-viewer{display:flex;flex-direction:column;border-right:1px solid var(--border);overflow:hidden}
 .pdfchat-viewer-header{display:flex;align-items:center;justify-content:space-between;padding:7px 12px;background:var(--panel);border-bottom:1px solid var(--border);flex-shrink:0;font-size:.76rem;color:var(--muted);white-space:nowrap}
-.pdfchat-iframe{flex:1;border:none;width:100%;height:100%}
-.pdfchat-viewer-notice{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--muted);font-size:.8rem;text-align:center;padding:24px;background:var(--panel)}
+.pdfchat-viewer-header button{font-size:.7rem}
+.pdfchat-pdf-wrap{flex:1;overflow-y:auto;position:relative;background:#888}
+.pdfchat-pdf-pages{padding:12px;display:flex;flex-direction:column;align-items:center;gap:10px}
+.pdfchat-pdf-pages canvas{display:block;box-shadow:0 2px 10px rgba(0,0,0,.4);max-width:100%}
+.pdfchat-viewer-notice{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#ccc;font-size:.8rem;text-align:center;padding:24px;background:#666}
+.pdfchat-select-overlay{position:absolute;inset:0;cursor:crosshair;z-index:20;user-select:none}
+.pdfchat-select-rect{position:absolute;border:2px solid #4a9eff;background:rgba(74,158,255,.12);pointer-events:none}
+.pdfchat-select-hint{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.65);color:#fff;padding:7px 14px;border-radius:6px;font-size:.77rem;pointer-events:none;white-space:nowrap}
 .pdfchat-main{display:flex;flex-direction:column;overflow:hidden}
 .pdfchat-header{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-bottom:1px solid var(--border);flex-shrink:0;font-size:.82rem;font-weight:600}
 .pdfchat-area{flex:1;overflow-y:auto;padding:18px 22px 20px;display:flex;flex-direction:column}
@@ -863,18 +870,23 @@ input,textarea{font-family:inherit}
             <span id="pdfchatViewerTitle">📄 原文预览</span>
             <div style="display:flex;gap:5px;align-items:center">
               <button class="abtn abtn-ghost" style="font-size:.68rem;padding:2px 8px"
-                onclick="triggerImageUpload()" title="上传截图分析">🔍 截图分析</button>
+                onclick="startRegionSelect()" title="框选区域分析">✂️ 框选分析</button>
+              <button class="abtn abtn-ghost" style="font-size:.68rem;padding:2px 8px"
+                onclick="triggerImageUpload()" title="上传图片分析">🖼 上传图片</button>
               <input type="file" id="visionFileInput" accept="image/*" style="display:none"
                 onchange="handleVisionFile(event)">
               <button class="abtn abtn-ghost" style="font-size:.68rem;padding:2px 8px"
                 onclick="togglePdfViewer()" id="pdfchatToggleBtn">收起 ◀</button>
             </div>
           </div>
-          <div class="pdfchat-viewer-notice" id="pdfchatViewerNotice">
-            <div style="font-size:1.4rem;opacity:.3">📄</div>
-            <div>PDF 加载中…</div>
+          <div class="pdfchat-pdf-wrap" id="pdfchatPdfWrap">
+            <div class="pdfchat-viewer-notice" id="pdfchatViewerNotice">
+              <div style="font-size:1.8rem;opacity:.4">📄</div>
+              <div>PDF 加载中…</div>
+            </div>
+            <div class="pdfchat-pdf-pages" id="pdfchatPages"></div>
+            <div class="pdfchat-select-overlay" id="pdfchatSelectOverlay" style="display:none"></div>
           </div>
-          <iframe class="pdfchat-iframe" id="pdfchatIframe" src="" style="display:none" title="PDF 原文预览"></iframe>
         </div>
         <!-- 右栏：对话区 + 输入框 -->
         <div class="pdfchat-main">
@@ -1388,39 +1400,175 @@ function goToPdfChat(docId){
   const layout = document.querySelector('.pdfchat-layout');
   layout.classList.remove('viewer-hidden');
   document.getElementById('pdfchatToggleBtn').textContent = '收起 ◀';
-  document.getElementById('pdfchatIframe').src = '';
-  document.getElementById('pdfchatIframe').style.display = 'none';
+  document.getElementById('pdfchatPages').innerHTML = '';
   document.getElementById('pdfchatViewerNotice').style.display = 'flex';
-  document.getElementById('pdfchatViewerNotice').innerHTML = '<div style="font-size:1.4rem;opacity:.3">📄</div><div>PDF 加载中…</div>';
+  document.getElementById('pdfchatViewerNotice').innerHTML = '<div style="font-size:1.8rem;opacity:.4">📄</div><div>PDF 加载中…</div>';
+  document.getElementById('pdfchatSelectOverlay').style.display = 'none';
+  _pdfJsDoc = null;
   goPage('pdfchat');
   _loadPdfchatSections();
   _loadPdfViewer(docId);
 }
 
-let _pdfBlobUrl = '';
+let _pdfJsDoc = null;
+
+// 初始化 PDF.js worker
+if(typeof pdfjsLib !== 'undefined'){
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+}
 
 async function _loadPdfViewer(docId){
-  const iframe  = document.getElementById('pdfchatIframe');
   const notice  = document.getElementById('pdfchatViewerNotice');
+  const pages   = document.getElementById('pdfchatPages');
   const titleEl = document.getElementById('pdfchatViewerTitle');
-  notice.style.display='flex'; iframe.style.display='none';
-  notice.innerHTML='<div style="font-size:1.4rem;opacity:.3">📄</div><div>PDF 加载中…</div>';
+  notice.style.display='flex';
+  pages.innerHTML='';
+  _pdfJsDoc = null;
+
   try{
     const res = await authFetch(`${API}/api/documents/${docId}/file`);
     if(!res.ok){
-      const msg = res.status===410 ? '原始文件已失效，请重新上传' : `加载失败 (${res.status})`;
-      notice.innerHTML=`<div style="font-size:1.4rem;opacity:.3">⚠️</div><div style="color:var(--muted)">${msg}</div>`;
+      const msg = res.status===410 ? '文件已失效，请重新上传' : `加载失败 (${res.status})`;
+      notice.innerHTML=`<div style="font-size:1.8rem;opacity:.4">⚠️</div><div>${msg}</div>`;
       return;
     }
-    const blob = await res.blob();
-    if(_pdfBlobUrl) URL.revokeObjectURL(_pdfBlobUrl);
-    _pdfBlobUrl = URL.createObjectURL(blob);
-    iframe.src  = _pdfBlobUrl;
-    iframe.onload = ()=>{ notice.style.display='none'; iframe.style.display='block'; };
-    titleEl.textContent = '📄 原文';
+    const arrayBuf = await res.arrayBuffer();
+    const loadTask = pdfjsLib.getDocument({data: arrayBuf});
+    _pdfJsDoc = await loadTask.promise;
+    notice.style.display = 'none';
+    titleEl.textContent  = `📄 原文（${_pdfJsDoc.numPages}页）`;
+
+    // 渲染所有页（懒加载：先渲染前3页，滚动时继续）
+    for(let p = 1; p <= _pdfJsDoc.numPages; p++){
+      await _renderPdfPage(p);
+    }
   }catch(e){
-    notice.innerHTML=`<div style="font-size:1.4rem;opacity:.3">⚠️</div><div style="color:var(--muted)">预览失败：${e.message}</div>`;
+    notice.style.display='flex';
+    notice.innerHTML=`<div style="font-size:1.8rem;opacity:.4">⚠️</div><div>预览失败：${e.message}</div>`;
   }
+}
+
+async function _renderPdfPage(pageNum){
+  if(!_pdfJsDoc) return;
+  const wrap   = document.getElementById('pdfchatPdfWrap');
+  const pages  = document.getElementById('pdfchatPages');
+  const page   = await _pdfJsDoc.getPage(pageNum);
+  const vw     = wrap.clientWidth - 24;  // 减去 padding
+  const baseVP = page.getViewport({scale: 1});
+  const scale  = Math.min(vw / baseVP.width, 2.0);
+  const vp     = page.getViewport({scale});
+
+  const canvas = document.createElement('canvas');
+  canvas.width  = vp.width;
+  canvas.height = vp.height;
+  canvas.style.width  = vp.width + 'px';
+  canvas.dataset.page = pageNum;
+  pages.appendChild(canvas);
+
+  await page.render({canvasContext: canvas.getContext('2d'), viewport: vp}).promise;
+}
+
+// ── 框选截图 ───────────────────────────────────────────────────────────
+let _selStart = null, _selRect = null, _selOverlay = null;
+
+function startRegionSelect(){
+  if(!_pdfJsDoc){
+    alert('请先等待 PDF 加载完成');
+    return;
+  }
+  const overlay = document.getElementById('pdfchatSelectOverlay');
+  overlay.innerHTML = '<div class="pdfchat-select-hint">拖动框选要分析的区域 · ESC 取消</div>';
+  overlay.style.display = 'block';
+  _selOverlay = overlay;
+
+  overlay.onmousedown = e => {
+    e.preventDefault();
+    const or = overlay.getBoundingClientRect();
+    _selStart = {x: e.clientX - or.left, y: e.clientY - or.top};
+    _selRect = document.createElement('div');
+    _selRect.className = 'pdfchat-select-rect';
+    overlay.appendChild(_selRect);
+  };
+
+  overlay.onmousemove = e => {
+    if(!_selStart || !_selRect) return;
+    const or = overlay.getBoundingClientRect();
+    const cx = e.clientX - or.left, cy = e.clientY - or.top;
+    const l = Math.min(cx, _selStart.x), t = Math.min(cy, _selStart.y);
+    const w = Math.abs(cx - _selStart.x), h = Math.abs(cy - _selStart.y);
+    _selRect.style.cssText = `position:absolute;left:${l}px;top:${t}px;width:${w}px;height:${h}px;border:2px solid #4a9eff;background:rgba(74,158,255,.12);pointer-events:none`;
+  };
+
+  overlay.onmouseup = e => {
+    if(!_selStart) return;
+    const or = overlay.getBoundingClientRect();
+    const cx = e.clientX - or.left, cy = e.clientY - or.top;
+    const l = Math.min(cx, _selStart.x), t = Math.min(cy, _selStart.y);
+    const w = Math.abs(cx - _selStart.x), h = Math.abs(cy - _selStart.y);
+    _selStart = null;
+    overlay.style.display = 'none';
+    if(w < 10 || h < 10) return;
+    _captureRegion(or, l, t, w, h);
+  };
+
+  const escHandler = e => {
+    if(e.key === 'Escape'){ overlay.style.display='none'; _selStart=null; document.removeEventListener('keydown', escHandler); }
+  };
+  document.addEventListener('keydown', escHandler);
+}
+
+function _captureRegion(overlayRect, selL, selT, selW, selH){
+  const wrap      = document.getElementById('pdfchatPdfWrap');
+  const scrollTop = wrap.scrollTop;
+  const scrollLeft= wrap.scrollLeft;
+
+  // overlay 坐标 → wrap 内容坐标（加上滚动偏移）
+  const absL = selL + scrollLeft;
+  const absT = selT + scrollTop;
+
+  const out = document.createElement('canvas');
+  out.width  = selW;
+  out.height = selH;
+  const ctx  = out.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, selW, selH);
+
+  // 遍历所有已渲染 canvas，拼合到 out
+  const pagesEl = document.getElementById('pdfchatPages');
+  const wrapRect = wrap.getBoundingClientRect();
+  let captured  = false;
+
+  document.querySelectorAll('#pdfchatPages canvas').forEach(pgCanvas => {
+    const pgRect  = pgCanvas.getBoundingClientRect();
+    const pgL = pgRect.left - wrapRect.left + scrollLeft;
+    const pgT = pgRect.top  - wrapRect.top  + scrollTop;
+    const pgW = pgCanvas.offsetWidth;
+    const pgH = pgCanvas.offsetHeight;
+
+    const ol = Math.max(absL, pgL), ot = Math.max(absT, pgT);
+    const or = Math.min(absL + selW, pgL + pgW), ob = Math.min(absT + selH, pgT + pgH);
+    if(or <= ol || ob <= ot) return;
+
+    const scaleX = pgCanvas.width  / pgW;
+    const scaleY = pgCanvas.height / pgH;
+    ctx.drawImage(pgCanvas,
+      (ol - pgL) * scaleX, (ot - pgT) * scaleY,
+      (or - ol)  * scaleX, (ob - ot)  * scaleY,
+      ol - absL, ot - absT, or - ol, ob - ot
+    );
+    captured = true;
+  });
+
+  if(!captured){ alert('未能捕获内容，请确认 PDF 已完全加载'); return; }
+
+  const dataUrl = out.toDataURL('image/png');
+  _visionB64  = dataUrl.split(',')[1];
+  _visionMime = 'image/png';
+  document.getElementById('visionPreviewImg').src = dataUrl;
+  document.getElementById('visionPreviewWrap').style.display = 'block';
+  document.getElementById('pdfchatInput').placeholder = '描述想了解的内容，或直接发送让 AI 分析选区…';
+  document.getElementById('pdfchatInput').focus();
 }
 
 function togglePdfViewer(){

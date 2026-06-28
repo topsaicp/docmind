@@ -62,7 +62,7 @@ def analyze_image_stream(
     def event_gen():
         try:
             resp = client.chat.completions.create(
-                model="gemini-1.5-flash",
+                model="gemini-2.5-flash",
                 messages=messages,
                 max_tokens=2048,
                 stream=True,
