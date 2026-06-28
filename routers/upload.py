@@ -5,9 +5,10 @@ GET  /documents    → 列出所有文档
 DELETE /documents/{doc_id} → 删除文档
 GET  /documents/{doc_id}/status → 查询处理状态
 """
-import uuid, threading
+import uuid, threading, urllib.parse
 from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
+from fastapi.responses import FileResponse as _FileResponse
 from sqlalchemy.orm import Session
 
 from config import UPLOAD_DIR, MAX_FILE_SIZE_MB, ALLOWED_EXT, FREE_PDF_LIMIT
@@ -142,6 +143,26 @@ def get_status(doc_id: str, session: Session = Depends(get_session),
         "chunks":  doc.chunk_count,
         "error":   doc.error_msg,
     }
+
+
+@router.get("/documents/{doc_id}/file")
+def get_pdf_file(
+    doc_id: str,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    doc = session.query(Document).filter_by(id=doc_id, user_id=current_user.id).first()
+    if not doc:
+        raise HTTPException(404, "文档不存在")
+    pdf_path = UPLOAD_DIR / doc.filename
+    if not pdf_path.exists():
+        raise HTTPException(410, "原始文件不存在（服务重启后文件会清除，请重新上传）")
+    safe_name = urllib.parse.quote(doc.original_name, safe="")
+    return _FileResponse(
+        str(pdf_path),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"inline; filename*=UTF-8''{safe_name}"},
+    )
 
 
 @router.delete("/documents/{doc_id}")
