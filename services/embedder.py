@@ -18,16 +18,30 @@ _collection = None
 _META_PREFIX_RE = re.compile(r'^\[文档:[^\]]*\](?:\[章节:[^\]]*\])?\s*\n?')
 
 
+_JINA_MAX_CHARS = 8000   # jina-embeddings-v3 单条输入上限
+
 def embed_texts(texts: list[str], is_query: bool = False) -> list[list[float]]:
     task = "retrieval.query" if is_query else "retrieval.passage"
-    resp = requests.post(
-        "https://api.jina.ai/v1/embeddings",
-        headers={"Authorization": f"Bearer {JINA_API_KEY}", "Content-Type": "application/json"},
-        json={"model": "jina-embeddings-v3", "input": texts, "task": task, "dimensions": 768},
-        timeout=30,
-    )
-    resp.raise_for_status()
-    return [item["embedding"] for item in resp.json()["data"]]
+    # 超长文本截断，防止 Jina 拒绝请求
+    safe_texts = [t[:_JINA_MAX_CHARS] for t in texts]
+
+    last_err = None
+    for attempt in range(3):
+        try:
+            resp = requests.post(
+                "https://api.jina.ai/v1/embeddings",
+                headers={"Authorization": f"Bearer {JINA_API_KEY}",
+                         "Content-Type": "application/json"},
+                json={"model": "jina-embeddings-v3", "input": safe_texts,
+                      "task": task, "dimensions": 768},
+                timeout=60,
+            )
+            resp.raise_for_status()
+            return [item["embedding"] for item in resp.json()["data"]]
+        except Exception as e:
+            last_err = e
+            import time; time.sleep(2 ** attempt)   # 1s / 2s / 4s 退避
+    raise RuntimeError(f"Jina 向量化失败（已重试3次）: {last_err}")
 
 
 def _get_collection() -> chromadb.Collection:
@@ -41,7 +55,7 @@ def _get_collection() -> chromadb.Collection:
     return _collection
 
 
-def add_chunks(chunks: list[dict], batch_size: int = 32) -> int:
+def add_chunks(chunks: list[dict], batch_size: int = 16) -> int:
     collection = _get_collection()
     added = 0
     for i in tqdm(range(0, len(chunks), batch_size), desc="向量化入库"):

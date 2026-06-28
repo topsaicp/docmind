@@ -258,12 +258,30 @@ def _extract_en_structured(pdf_path: str) -> str:
     return "\n\n".join(filter(None, out)).strip()
 
 
+def _extract_plain(pdf_path: str) -> str:
+    """最终兜底：PyMuPDF 直接逐页提取纯文本，永远不会抛出异常。"""
+    doc  = fitz.open(pdf_path)
+    pages_text = []
+    for page in doc:
+        t = page.get_text("text").strip()
+        if t:
+            pages_text.append(t)
+    doc.close()
+    return "\n\n".join(pages_text)
+
+
 def _extract_zh(pdf_path: str) -> str:
+    text = ""
     try:
         from markitdown import MarkItDown
-        return MarkItDown().convert(pdf_path).text_content.strip()
+        text = MarkItDown().convert(pdf_path).text_content.strip()
     except Exception:
-        return _extract_en_structured(pdf_path)
+        pass
+
+    # MarkItDown 提取结果过少（表格类 PDF 常见），改用纯文本
+    if len(text) < 200:
+        text = _extract_plain(pdf_path)
+    return text
 
 
 def _extract_ocr(pdf_path: str) -> str:
@@ -283,12 +301,20 @@ def _extract_ocr(pdf_path: str) -> str:
 
 def extract_text(pdf_path: str) -> str:
     if is_scanned(pdf_path):
-        return _extract_ocr(pdf_path)
+        raw = _extract_ocr(pdf_path)
+        # 扫描件 OCR 也失败时降级为纯文本
+        return raw if raw.strip() else _extract_plain(pdf_path)
+
     doc    = fitz.open(pdf_path)
     sample = "".join(doc[i].get_text() for i in range(min(2, len(doc))))
     doc.close()
-    return _extract_zh(pdf_path) if detect_language(sample) == "zh" \
-           else _extract_en_structured(pdf_path)
+
+    if detect_language(sample) == "zh":
+        return _extract_zh(pdf_path)
+    else:
+        text = _extract_en_structured(pdf_path)
+        # 英文结构化提取结果过少时也用纯文本兜底
+        return text if len(text) >= 200 else _extract_plain(pdf_path)
 
 
 def clean_text(text: str, lang: str = "en") -> str:

@@ -1002,6 +1002,7 @@ function renderLibDocList(docs){
       <div class="doc-card-info">
         <div class="doc-card-name" title="${esc(d.filename)}">${esc(d.filename)}</div>
         <div class="doc-card-meta">${d.size_mb} MB · ${d.pages||'-'} 页 · ${d.chunks||0} 向量块</div>
+        ${d.status==='error'&&d.error?`<div style="font-size:.7rem;color:#f87171;margin-top:3px;line-height:1.4;word-break:break-all">${esc(d.error)}</div>`:''}
       </div>
       <div class="doc-card-actions">
         <span class="badge badge-${d.status}">${statusLabel(d.status)}</span>
