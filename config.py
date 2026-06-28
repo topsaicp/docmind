@@ -26,11 +26,11 @@ OPENAI_BASE_URL    = "https://api.openai.com/v1"
 MODEL_ROUTES: dict[str, tuple[str, str, str]] = {
     # 任务          api_key              base_url             model_id
     # -------------------------------------------------------------------
-    "qa":       (DEEPSEEK_API_KEY,  DEEPSEEK_BASE_URL,  "deepseek-chat"),
-    "multi":    (DEEPSEEK_API_KEY,  DEEPSEEK_BASE_URL,  "deepseek-chat"),
-    "review":   (DEEPSEEK_API_KEY,  DEEPSEEK_BASE_URL,  "deepseek-chat"),
+    "qa":       (DEEPSEEK_API_KEY,  DEEPSEEK_BASE_URL,  "deepseek-v4-flash"),
+    "multi":    (DEEPSEEK_API_KEY,  DEEPSEEK_BASE_URL,  "deepseek-v4-flash"),
+    "review":   (DEEPSEEK_API_KEY,  DEEPSEEK_BASE_URL,  "deepseek-v4-flash"),
     "writing":  (GROQ_API_KEY,      GROQ_BASE_URL,      "llama-3.3-70b-versatile"),
-    "cite":     (DEEPSEEK_API_KEY,  DEEPSEEK_BASE_URL,  "deepseek-chat"),
+    "cite":     (DEEPSEEK_API_KEY,  DEEPSEEK_BASE_URL,  "deepseek-v4-flash"),
 }
 
 # 429/限流时自动降级到此备用路由
@@ -38,7 +38,7 @@ MODEL_FALLBACK: dict[str, tuple[str, str, str]] = {
     "qa":       (GROQ_API_KEY,  GROQ_BASE_URL,  "llama-3.1-8b-instant"),
     "multi":    (GROQ_API_KEY,  GROQ_BASE_URL,  "llama-3.1-8b-instant"),
     "review":   (GROQ_API_KEY,  GROQ_BASE_URL,  "llama-3.3-70b-versatile"),
-    "writing":  (DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, "deepseek-chat"),
+    "writing":  (DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, "deepseek-v4-flash"),
     "cite":     (GROQ_API_KEY,  GROQ_BASE_URL,  "llama-3.1-8b-instant"),
 }
 
