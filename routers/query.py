@@ -34,12 +34,18 @@ def _check_and_count_query(user: User, session: Session):
     session.commit()
 
 
+class HistoryMsg(BaseModel):
+    role:    str   # "user" | "assistant"
+    content: str
+
 class AskRequest(BaseModel):
     question:  str
-    top_k:     int       = 5
-    doc_ids:   list[str] = []   # 空 = 全库；非空 = 指定文档
-    section:   str       = ""   # 非空 = 只检索该章节
-    task_hint: str       = ""   # 显式路由: qa / multi / review / writing / cite
+    top_k:     int            = 5
+    doc_ids:   list[str]      = []   # 空 = 全库；非空 = 指定文档
+    section:   str            = ""   # 非空 = 只检索该章节
+    task_hint: str            = ""   # 显式路由: qa / multi / review / writing / cite
+    history:   list[HistoryMsg] = [] # 多轮对话历史
+    use_web:   bool           = False # 联网检索
 
 
 @router.post("/ask")
@@ -53,6 +59,8 @@ def ask_question(req: AskRequest, session: Session = Depends(get_session),
         doc_ids   = req.doc_ids or None,
         section   = req.section or None,
         task_hint = req.task_hint,
+        history   = [{"role": m.role, "content": m.content} for m in req.history],
+        use_web   = req.use_web,
     )
     return {"question": req.question, "answer": answer, "sources": sources}
 
@@ -67,11 +75,14 @@ def ask_stream(req: AskRequest, session: Session = Depends(get_session),
     doc_ids   = req.doc_ids or None
     section   = req.section or None
     task_hint = req.task_hint
+    history   = [{"role": m.role, "content": m.content} for m in req.history]
+    use_web   = req.use_web
 
     def event_generator():
         try:
             gen = ask(req.question, stream=True,
-                      doc_ids=doc_ids, section=section, task_hint=task_hint)
+                      doc_ids=doc_ids, section=section, task_hint=task_hint,
+                      history=history, use_web=use_web)
             for chunk in gen:
                 if isinstance(chunk, dict):
                     yield f"data: {json.dumps({'type':'sources','sources':chunk['sources']}, ensure_ascii=False)}\n\n"

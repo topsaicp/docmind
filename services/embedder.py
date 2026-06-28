@@ -1,31 +1,79 @@
 """
-向量化服务：Jina AI Embedding API + Chroma
-无需本地模型，零内存占用
-
-v2 新增：
-- add_chunks() 存储 parent_group_id / child_seq 元数据
-- expand_hits_to_parent() 将检索命中的子块展开为父块上下文
+向量化服务：Jina AI Embedding API + Supabase pgvector
+持久化存储，Railway 重启/重部署后数据不丢失
 """
-import re
+import os, re, time
 import requests
-import chromadb
-from tqdm import tqdm
-from config import CHROMA_DIR, COLLECTION_NAME, JINA_API_KEY
+import psycopg2
+import psycopg2.extras
+from config import JINA_API_KEY
 
-_collection = None
-
-# 元数据前缀模式（用于展开时剥离重复前缀）
+DATABASE_URL   = os.getenv("DATABASE_URL", "")
+_JINA_MAX_CHARS = 8000
 _META_PREFIX_RE = re.compile(r'^\[文档:[^\]]*\](?:\[章节:[^\]]*\])?\s*\n?')
+_table_ready    = False
 
 
-_JINA_MAX_CHARS = 8000   # jina-embeddings-v3 单条输入上限
+# ── DB 连接 ──────────────────────────────────────────────────────────────
+def _conn():
+    return psycopg2.connect(DATABASE_URL)
 
+
+def _ensure_table():
+    """首次调用时建表建索引（幂等）。"""
+    global _table_ready
+    if _table_ready:
+        return
+    conn = _conn()
+    try:
+        cur = conn.cursor()
+        # pgvector 扩展（Supabase 默认已启用；失败则忽略）
+        try:
+            cur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
+            conn.commit()
+        except Exception:
+            conn.rollback()
+        # 主表
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS doc_chunks (
+                id               TEXT PRIMARY KEY,
+                doc_id           TEXT NOT NULL,
+                filename         TEXT NOT NULL,
+                chunk_id         INTEGER NOT NULL,
+                text             TEXT NOT NULL,
+                lang             TEXT DEFAULT 'en',
+                section          TEXT DEFAULT '',
+                parent_group_id  TEXT DEFAULT '',
+                child_seq        INTEGER DEFAULT 0,
+                embedding        vector(768)
+            );
+        """)
+        cur.execute(
+            "CREATE INDEX IF NOT EXISTS idx_dc_doc_id ON doc_chunks(doc_id);"
+        )
+        # HNSW 向量索引（可选；无索引时自动顺序扫描）
+        try:
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_dc_emb
+                ON doc_chunks USING hnsw (embedding vector_cosine_ops);
+            """)
+        except Exception:
+            pass
+        conn.commit()
+        cur.close()
+        _table_ready = True
+    except Exception as e:
+        conn.rollback()
+        raise RuntimeError(f"pgvector 初始化失败: {e}")
+    finally:
+        conn.close()
+
+
+# ── Jina Embedding ───────────────────────────────────────────────────────
 def embed_texts(texts: list[str], is_query: bool = False) -> list[list[float]]:
-    task = "retrieval.query" if is_query else "retrieval.passage"
-    # 超长文本截断，防止 Jina 拒绝请求
+    task       = "retrieval.query" if is_query else "retrieval.passage"
     safe_texts = [t[:_JINA_MAX_CHARS] for t in texts]
-
-    last_err = None
+    last_err   = None
     for attempt in range(3):
         try:
             resp = requests.post(
@@ -40,167 +88,190 @@ def embed_texts(texts: list[str], is_query: bool = False) -> list[list[float]]:
             return [item["embedding"] for item in resp.json()["data"]]
         except Exception as e:
             last_err = e
-            import time; time.sleep(2 ** attempt)   # 1s / 2s / 4s 退避
+            time.sleep(2 ** attempt)
     raise RuntimeError(f"Jina 向量化失败（已重试3次）: {last_err}")
 
 
-def _get_collection() -> chromadb.Collection:
-    global _collection
-    if _collection is None:
-        client      = chromadb.PersistentClient(path=str(CHROMA_DIR))
-        _collection = client.get_or_create_collection(
-            name     = COLLECTION_NAME,
-            metadata = {"hnsw:space": "cosine"},
-        )
-    return _collection
+def _vec(emb: list[float]) -> str:
+    return '[' + ','.join(f'{v:.8f}' for v in emb) + ']'
 
 
+# ── CRUD ─────────────────────────────────────────────────────────────────
 def add_chunks(chunks: list[dict], batch_size: int = 16) -> int:
-    collection = _get_collection()
+    _ensure_table()
     added = 0
-    for i in tqdm(range(0, len(chunks), batch_size), desc="向量化入库"):
+    for i in range(0, len(chunks), batch_size):
         batch      = chunks[i:i + batch_size]
-        texts      = [c["text"] for c in batch]
-        embeddings = embed_texts(texts, is_query=False)
-        collection.add(
-            ids        = [c["id"] for c in batch],
-            documents  = texts,
-            embeddings = embeddings,
-            metadatas  = [{
-                "doc_id":          c["doc_id"],
-                "filename":        c["filename"],
-                "chunk_id":        c["chunk_id"],
-                "lang":            c.get("lang", "en"),
-                "section":         c.get("section", ""),
-                # 父子块追踪字段（v2）
-                "parent_group_id": c.get("parent_group_id", ""),
-                "child_seq":       c.get("child_seq", 0),
-            } for c in batch],
-        )
-        added += len(batch)
+        embeddings = embed_texts([c["text"] for c in batch], is_query=False)
+        conn = _conn()
+        try:
+            cur = conn.cursor()
+            for c, emb in zip(batch, embeddings):
+                cur.execute("""
+                    INSERT INTO doc_chunks
+                        (id, doc_id, filename, chunk_id, text, lang, section,
+                         parent_group_id, child_seq, embedding)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::vector)
+                    ON CONFLICT (id) DO NOTHING
+                """, (
+                    c["id"], c["doc_id"], c["filename"], c["chunk_id"],
+                    c["text"], c.get("lang", "en"), c.get("section", ""),
+                    c.get("parent_group_id", ""), c.get("child_seq", 0),
+                    _vec(emb),
+                ))
+            conn.commit()
+            cur.close()
+            added += len(batch)
+            print(f"向量化入库: {i + len(batch)}/{len(chunks)}")
+        except Exception as e:
+            conn.rollback()
+            raise e
+        finally:
+            conn.close()
     return added
 
 
 def delete_doc(doc_id: str) -> int:
-    collection = _get_collection()
-    results    = collection.get(where={"doc_id": doc_id})
-    ids        = results.get("ids", [])
-    if ids:
-        collection.delete(ids=ids)
-    return len(ids)
+    _ensure_table()
+    conn = _conn()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM doc_chunks WHERE doc_id=%s", (doc_id,))
+        count = cur.fetchone()[0]
+        cur.execute("DELETE FROM doc_chunks WHERE doc_id=%s", (doc_id,))
+        conn.commit()
+        cur.close()
+        return count
+    finally:
+        conn.close()
 
 
 def collection_count() -> int:
-    return _get_collection().count()
+    _ensure_table()
+    conn = _conn()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM doc_chunks")
+        n = cur.fetchone()[0]
+        cur.close()
+        return n
+    finally:
+        conn.close()
 
 
 def get_doc_header(doc_id: str, n: int = 3) -> list[dict]:
-    """返回文档最前面的 n 个 chunk（含作者/标题/年份/期刊信息）"""
-    collection = _get_collection()
-    results    = collection.get(where={"doc_id": doc_id},
-                                include=["documents", "metadatas"])
-    if not results["ids"]:
-        return []
-    items = sorted(
-        zip(results["documents"], results["metadatas"]),
-        key=lambda x: int(x[1].get("chunk_id", 0))
-    )
-    return [{"text": t, "filename": m["filename"], "doc_id": m["doc_id"],
-             "section": m.get("section", "")} for t, m in items[:n]]
+    _ensure_table()
+    conn = _conn()
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("""
+            SELECT text, filename, doc_id, section
+            FROM doc_chunks WHERE doc_id=%s ORDER BY chunk_id LIMIT %s
+        """, (doc_id, n))
+        rows = cur.fetchall()
+        cur.close()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
 
 
 def get_doc_sections(doc_id: str) -> list[str]:
-    collection = _get_collection()
-    results    = collection.get(where={"doc_id": doc_id}, include=["metadatas"])
-    seen, ordered = set(), []
-    for m in results["metadatas"]:
-        sec = m.get("section", "").strip()
-        if sec and sec not in seen:
-            seen.add(sec); ordered.append(sec)
-    return ordered
+    _ensure_table()
+    conn = _conn()
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT section, MIN(chunk_id) AS first_chunk
+            FROM doc_chunks WHERE doc_id=%s AND section!=''
+            GROUP BY section ORDER BY first_chunk
+        """, (doc_id,))
+        rows = cur.fetchall()
+        cur.close()
+        return [r[0] for r in rows]
+    finally:
+        conn.close()
 
 
 def search(query: str, top_k: int = 8, doc_ids: list[str] | None = None,
            section: str | None = None) -> list[dict]:
-    collection = _get_collection()
-    query_vec  = embed_texts([query], is_query=True)
-
-    conditions = []
-    if doc_ids:
-        conditions.append({"doc_id": {"$eq": doc_ids[0]}} if len(doc_ids) == 1
-                          else {"doc_id": {"$in": doc_ids}})
-    if section:
-        conditions.append({"section": {"$eq": section}})
-
-    where = None if not conditions else (
-        conditions[0] if len(conditions) == 1 else {"$and": conditions}
-    )
-
-    total = collection.count()
+    _ensure_table()
+    total = collection_count()
     if total == 0:
         return []
 
-    kwargs = dict(query_embeddings=query_vec, n_results=min(top_k, total),
-                  include=["documents", "metadatas", "distances"])
-    if where:
-        kwargs["where"] = where
+    query_vec = embed_texts([query], is_query=True)[0]
+    vec       = _vec(query_vec)
 
-    results = collection.query(**kwargs)
-    return [{
-        "text":            results["documents"][0][i],
-        "filename":        results["metadatas"][0][i]["filename"],
-        "doc_id":          results["metadatas"][0][i]["doc_id"],
-        "chunk_id":        results["metadatas"][0][i]["chunk_id"],
-        "section":         results["metadatas"][0][i].get("section", ""),
-        "parent_group_id": results["metadatas"][0][i].get("parent_group_id", ""),
-        "score":           round(1 - results["distances"][0][i], 4),
-    } for i in range(len(results["documents"][0]))]
+    where_parts, where_params = [], []
+    if doc_ids:
+        if len(doc_ids) == 1:
+            where_parts.append("doc_id = %s")
+            where_params.append(doc_ids[0])
+        else:
+            where_parts.append("doc_id = ANY(%s)")
+            where_params.append(doc_ids)
+    if section:
+        where_parts.append("section = %s")
+        where_params.append(section)
+
+    where_clause = ("WHERE " + " AND ".join(where_parts)) if where_parts else ""
+    sql = f"""
+        SELECT id, doc_id, filename, chunk_id, text, section, parent_group_id,
+               1 - (embedding <=> %s::vector) AS score
+        FROM doc_chunks
+        {where_clause}
+        ORDER BY embedding <=> %s::vector
+        LIMIT %s
+    """
+    params = [vec] + where_params + [vec, min(top_k, total)]
+
+    conn = _conn()
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(sql, params)
+        rows = cur.fetchall()
+        cur.close()
+        return [{
+            "text":            r["text"],
+            "filename":        r["filename"],
+            "doc_id":          r["doc_id"],
+            "chunk_id":        r["chunk_id"],
+            "section":         r["section"],
+            "parent_group_id": r["parent_group_id"],
+            "score":           round(float(r["score"]), 4),
+        } for r in rows]
+    finally:
+        conn.close()
 
 
 def expand_hits_to_parent(hits: list[dict], window: int = 1) -> list[dict]:
-    """
-    父块展开：将每个子块命中扩展为「前 window 块 + 命中块 + 后 window 块」的
-    父块上下文，为 LLM 提供更完整的原文语境。
-
-    - window=1 → 父块 = 3 个子块（约 840 中文字 / 1440 英文字）
-    - 只展开同一文档内的相邻块，不跨文档
-    - 相邻块的元数据前缀 [文档: ...][章节: ...] 仅保留首块，避免重复
-    - 对旧版文档（无 parent_group_id 元数据）降级：直接按 chunk_id ±window 取块
-    """
     if not hits:
         return hits
-
-    collection = _get_collection()
-    expanded   = []
-
+    _ensure_table()
+    expanded = []
     for hit in hits:
         doc_id = hit["doc_id"]
         cid    = int(hit.get("chunk_id", 0))
-        ids    = [f"{doc_id}_{i}" for i in range(max(0, cid - window), cid + window + 1)]
-
+        conn   = _conn()
         try:
-            res = collection.get(ids=ids, include=["documents", "metadatas"])
-            if not res["documents"]:
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute("""
+                SELECT text, chunk_id FROM doc_chunks
+                WHERE doc_id=%s AND chunk_id BETWEEN %s AND %s
+                ORDER BY chunk_id
+            """, (doc_id, max(0, cid - window), cid + window))
+            rows = cur.fetchall()
+            cur.close()
+            if not rows:
                 expanded.append(hit)
                 continue
-
-            # 按 chunk_id 排序
-            pairs = sorted(
-                zip(res["documents"], res["metadatas"]),
-                key=lambda x: int(x[1].get("chunk_id", 0)),
-            )
-
-            # 首块保留前缀，其余剥除（避免重复的元数据前缀干扰 LLM）
             texts = []
-            for idx, (doc_text, _) in enumerate(pairs):
-                if idx == 0:
-                    texts.append(doc_text)
-                else:
-                    texts.append(_META_PREFIX_RE.sub('', doc_text))
-
+            for idx, row in enumerate(rows):
+                t = row["text"]
+                texts.append(t if idx == 0 else _META_PREFIX_RE.sub('', t))
             expanded.append({**hit, "text": "\n\n".join(texts)})
-
         except Exception:
-            expanded.append(hit)   # 任何异常降级为原始子块
-
+            expanded.append(hit)
+        finally:
+            conn.close()
     return expanded

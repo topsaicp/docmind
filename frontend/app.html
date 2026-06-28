@@ -583,7 +583,13 @@ input,textarea{font-family:inherit}
           <div class="lib-upload-hint">支持多文件，单文件最大 50MB</div>
         </div>
         <div id="libUploadStatus"></div>
-        <div class="lib-section-title">我的文献（<span id="libDocCount">0</span> 篇）</div>
+        <div class="lib-section-title" style="display:flex;align-items:center;justify-content:space-between">
+          <span>我的文献（<span id="libDocCount">0</span> 篇）</span>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button class="abtn abtn-ghost" style="font-size:.68rem;padding:3px 9px" onclick="libToggleSelectAll()">全选/取消</button>
+            <button class="abtn abtn-danger" id="batchDelBtn" style="font-size:.68rem;padding:3px 9px;display:none" onclick="batchDeleteDocs()">批量删除 (<span id="batchDelCount">0</span>)</button>
+          </div>
+        </div>
         <div id="libDocList"><div class="empty-msg">暂无文档，请先上传 PDF</div></div>
       </div>
     </div>
@@ -612,7 +618,10 @@ input,textarea{font-family:inherit}
         <div class="chat-panel">
           <div class="chat-panel-header">
             <span style="font-size:.82rem;font-weight:600;color:var(--fg)">AI 对话</span>
-            <div style="display:flex;gap:6px">
+            <div style="display:flex;gap:6px;align-items:center">
+              <button class="abtn abtn-ghost" id="webSearchBtn" onclick="toggleWebSearch()"
+                title="联网检索：开启后回答时同步搜索互联网补充信息"
+                style="font-size:.7rem;padding:3px 9px">🌐 联网</button>
               <button class="abtn abtn-ghost" onclick="goPage('review')" title="生成文献综述">📝 综述</button>
               <button class="abtn abtn-ghost" onclick="clearHistory()">🗑 清空</button>
             </div>
@@ -839,11 +848,14 @@ let currentUser    = null;
 let authMode       = 'login';
 let selectedDocs   = new Set();   // for Q&A + writing
 let reviewDocs     = new Set();   // for 文献综述 page (independent)
+let libSelected    = new Set();   // for batch delete in library
 let allDocs        = [];
 let isAsking       = false;
 let activeSection  = '';
 let writingActive  = false;
 let reviewStreaming = false;
+let useWebSearch   = false;        // 联网检索开关
+let convHistory    = [];           // 多轮对话历史（内存，最多保留 10 条）
 let citeMetaCache  = {};          // doc_id → metadata cache
 let citeCurrentMeta = null;
 let citeCurrentFmt  = 'gb7714';
@@ -998,6 +1010,10 @@ function renderLibDocList(docs){
   if(!docs.length){ el.innerHTML='<div class="empty-msg">暂无文档，请先上传 PDF</div>'; return; }
   el.innerHTML=docs.map(d=>`
     <div class="doc-card" id="dcard-${d.doc_id}">
+      <input type="checkbox" class="lib-chk" data-id="${d.doc_id}"
+        ${libSelected.has(d.doc_id)?'checked':''}
+        onchange="libToggleOne('${d.doc_id}',this.checked)"
+        style="margin:0 4px 0 0;cursor:pointer;accent-color:var(--gold)">
       <div class="doc-card-icon">📄</div>
       <div class="doc-card-info">
         <div class="doc-card-name" title="${esc(d.filename)}">${esc(d.filename)}</div>
@@ -1015,6 +1031,39 @@ function renderLibDocList(docs){
           onclick="deleteDoc('${d.doc_id}','${escA(d.filename)}')">删除</button>
       </div>
     </div>`).join('');
+}
+
+// ── 批量删除 ──────────────────────────────────────────────────────────
+function libToggleOne(id, checked){
+  if(checked) libSelected.add(id); else libSelected.delete(id);
+  _updateBatchBar();
+}
+function libToggleSelectAll(){
+  const all=allDocs.map(d=>d.doc_id);
+  if(libSelected.size===all.length){ libSelected.clear(); }
+  else{ all.forEach(id=>libSelected.add(id)); }
+  renderLibDocList(allDocs); _updateBatchBar();
+}
+function _updateBatchBar(){
+  const btn=document.getElementById('batchDelBtn');
+  const cnt=document.getElementById('batchDelCount');
+  if(!btn) return;
+  if(libSelected.size>0){ btn.style.display=''; cnt.textContent=libSelected.size; }
+  else{ btn.style.display='none'; }
+}
+async function batchDeleteDocs(){
+  if(!libSelected.size) return;
+  if(!confirm(`确认删除选中的 ${libSelected.size} 个文档？此操作不可恢复。`)) return;
+  const ids=[...libSelected];
+  for(const id of ids){
+    try{
+      await authFetch(`${API}/api/documents/${id}`,{method:'DELETE'});
+      libSelected.delete(id);
+    }catch(e){ console.error('删除失败',id,e); }
+  }
+  _updateBatchBar();
+  await loadDocuments();
+  await loadLibStats();
 }
 
 function renderDspDocList(docs){
@@ -1217,6 +1266,17 @@ function appendQA(q,answer,sources,time,sec){
   box.appendChild(aEl);
 }
 
+// ── 联网检索开关 ──────────────────────────────────────────────────────
+function toggleWebSearch(){
+  useWebSearch=!useWebSearch;
+  const btn=document.getElementById('webSearchBtn');
+  if(btn){
+    btn.style.background=useWebSearch?'rgba(212,175,55,.18)':'';
+    btn.style.color=useWebSearch?'var(--gold)':'';
+    btn.title=useWebSearch?'联网检索：已开启（点击关闭）':'联网检索：开启后回答时同步搜索互联网';
+  }
+}
+
 async function askQuestion(overrideQ){
   if(isAsking) return;
   const input=document.getElementById('questionInput');
@@ -1229,6 +1289,7 @@ async function askQuestion(overrideQ){
   const tip=document.getElementById('emptyTip'); if(tip) tip.remove();
   const qEl=document.createElement('div'); qEl.className='msg-group';
   qEl.innerHTML=`<div class="msg-q">${sec?`<div class="msg-section-tag">📌 ${esc(sec)}</div>`:''}
+    ${useWebSearch?'<span style="font-size:.65rem;color:var(--gold);opacity:.8">🌐 联网</span>':''}
     <div class="bubble">${esc(q)}</div><div class="msg-time">${formatTime(now)}</div></div>`;
   box.appendChild(qEl); scrollChatToBottom();
   const aEl=document.createElement('div'); aEl.className='msg-group';
@@ -1240,7 +1301,13 @@ async function askQuestion(overrideQ){
   aMsgDiv.append(bubble,srcEl,timeEl); aEl.appendChild(aMsgDiv); box.appendChild(aEl); scrollChatToBottom();
   let fullText='',finalSources=[],rafPending=false;
   try{
-    const body={question:q,doc_ids:selectedDocs.size>0?[...selectedDocs]:[],section:sec};
+    const body={
+      question: q,
+      doc_ids:  selectedDocs.size>0?[...selectedDocs]:[],
+      section:  sec,
+      history:  convHistory.slice(-6),   // 最近 3 轮对话
+      use_web:  useWebSearch,
+    };
     const res=await authFetch(`${API}/api/ask/stream`,{method:'POST',
       headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     if(!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -1268,6 +1335,10 @@ async function askQuestion(overrideQ){
       Object.assign(document.createElement('div'),{innerHTML:msgActionsHtml(fullText,q,sec)}).firstElementChild, srcEl
     );
     scrollChatToBottom();
+    // 追加到多轮对话历史（内存）
+    convHistory.push({role:'user',content:q});
+    convHistory.push({role:'assistant',content:fullText});
+    if(convHistory.length>20) convHistory=convHistory.slice(-20);
     if(currentUser){currentUser.query_count_today=(currentUser.query_count_today||0)+1; updateDspUsage();}
     const h=loadHistory(); h.push({question:q,answer:fullText,sources:finalSources,time:now,section:sec}); saveHistory(h);
   }catch(err){
@@ -1312,6 +1383,7 @@ function jumpToHistory(idx){
 function clearHistory(fromHistoryPage){
   if(!confirm('确认清空所有对话历史？')) return;
   localStorage.removeItem(HISTORY_KEY);
+  convHistory=[];
   document.getElementById('chatHistory').innerHTML=
     '<div class="chat-empty-state" id="emptyTip"><div style="font-size:1.6rem;margin-bottom:8px;opacity:.3">💬</div>从左侧勾选文献，在下方输入问题开始对话</div>';
   if(fromHistoryPage) renderHistoryPage();

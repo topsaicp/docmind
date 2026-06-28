@@ -1,9 +1,11 @@
 """
 检索 + RAG 问答
-支持：自由问答 / 章节定向检索 / 多文档并行分析
+支持：自由问答 / 章节定向检索 / 多文档并行分析 / 历史对话 / 联网搜索
 """
+import urllib.parse
+import requests as _requests
 from openai import OpenAI
-from config import MODEL_ROUTES, TOP_K
+from config import MODEL_ROUTES, TOP_K, JINA_API_KEY
 from services.embedder import search, get_doc_sections, get_doc_header, expand_hits_to_parent
 
 # 每个任务类型独立缓存一个 OpenAI-compatible client
@@ -237,13 +239,41 @@ def build_multi_doc_context(per_doc_hits: dict[str, list[dict]]) -> tuple[str, l
     return "\n\n\n".join(parts), sources
 
 
+# ── 网络检索（Jina Search）─────────────────────────────────────────────
+def web_search(query: str, max_results: int = 3) -> str:
+    """调用 Jina Search API，返回格式化的网络搜索摘要。"""
+    if not JINA_API_KEY:
+        return ""
+    try:
+        url  = f"https://s.jina.ai/{urllib.parse.quote(query)}"
+        resp = _requests.get(
+            url,
+            headers={"Authorization": f"Bearer {JINA_API_KEY}",
+                     "Accept": "application/json"},
+            timeout=12,
+        )
+        resp.raise_for_status()
+        results = resp.json().get("data", [])[:max_results]
+        parts = []
+        for r in results:
+            title   = r.get("title", "")
+            src_url = r.get("url", "")
+            snippet = (r.get("description") or r.get("content") or "")[:600]
+            parts.append(f"**{title}**\n来源：{src_url}\n{snippet}")
+        return "\n\n---\n\n".join(parts)
+    except Exception as e:
+        return f"（联网检索失败：{e}）"
+
+
 # ── RAG 问答主入口 ─────────────────────────────────────────────────────
 def ask(
     question:  str,
     stream:    bool = False,
     doc_ids:   list[str] | None = None,
     section:   str | None = None,
-    task_hint: str = "",          # 前端显式传入任务类型，优先于关键词自动检测
+    task_hint: str = "",
+    history:   list[dict] | None = None,   # [{role:"user",content:...}, ...]
+    use_web:   bool = False,               # 是否附加联网检索结果
 ):
     # ── 任务类型解析（显式 task_hint 优先；否则关键词自动检测）──
     if task_hint in ("qa", "multi", "review", "writing", "cite"):
@@ -342,31 +372,49 @@ def ask(
                     "section": h.get("section", "")} for h in hits]
         qa_hint = (f'用户当前正在阅读【{section}】章节，请围绕该章节内容深度解读。'
                    if section else '请根据参考文档内容精准回答用户问题。')
+
+        web_block = ""
+        if use_web:
+            web_results = web_search(question)
+            if web_results:
+                web_block = f"\n\n【联网检索补充信息】\n{web_results}"
+
+        doc_rule = (
+            "- 优先使用参考文档内容；如文档中无相关信息，可参考联网检索结果并注明"
+            if use_web else
+            "- 只使用下方参考文档中的内容，不引入外部知识\n"
+            "- 若文档中没有相关内容，明确说明「提供的文档中未找到该信息」"
+        )
         prompt = f"""你是专业学术文献助手。{qa_hint}
 
 规则：
-- 只使用下方参考文档中的内容，不引入外部知识
+{doc_rule}
 - 默认用中文回答；用户若用英文提问可用英文回答
 - 回答结构清晰，引用信息时注明来源章节
-- 若文档中没有相关内容，明确说明"提供的文档中未找到该信息"
 
 参考文档：
-{context}
+{context}{web_block}
 
 用户问题：{question}"""
 
-    # ── 调用 LLM（统一入口，client 和 model_id 由路由决定）──
+    # ── 构建消息列表（history → 当前 prompt）──
+    hist = history or []
+    # 截取最近 6 条，避免 token 超限
+    trimmed_hist = hist[-6:] if len(hist) > 6 else hist
+    messages = trimmed_hist + [{"role": "user", "content": prompt}]
+
+    # ── 调用 LLM ──────────────────────────────────────────────────────
     if not stream:
         resp = client.chat.completions.create(
             model=model_id, max_tokens=4096,
-            messages=[{"role": "user", "content": prompt}],
+            messages=messages,
         )
         return resp.choices[0].message.content, sources
 
-    def _stream_gen(p=prompt, s=sources, c=client, m=model_id):
+    def _stream_gen(msgs=messages, s=sources, c=client, m=model_id):
         resp = c.chat.completions.create(
             model=m, max_tokens=4096,
-            messages=[{"role": "user", "content": p}],
+            messages=msgs,
             stream=True,
         )
         for chunk in resp:
