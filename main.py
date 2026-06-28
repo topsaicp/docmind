@@ -9,6 +9,7 @@ from routers.query    import router as query_router
 from routers.auth     import router as auth_router
 from routers.payment  import router as payment_router
 from routers.reduce   import router as reduce_router
+from routers.vision   import router as vision_router
 
 app = FastAPI(title="PDF 知识库问答系统", version="1.0.0")
 
@@ -21,6 +22,7 @@ app.include_router(payment_router)
 app.include_router(upload_router)
 app.include_router(query_router)
 app.include_router(reduce_router)
+app.include_router(vision_router)
 
 # 静态前端
 frontend_dir = Path(__file__).parent / "frontend"

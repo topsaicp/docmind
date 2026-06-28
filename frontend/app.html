@@ -861,8 +861,14 @@ input,textarea{font-family:inherit}
         <div class="pdfchat-viewer" id="pdfchatViewer">
           <div class="pdfchat-viewer-header">
             <span id="pdfchatViewerTitle">📄 原文预览</span>
-            <button class="abtn abtn-ghost" style="font-size:.68rem;padding:2px 8px"
-              onclick="togglePdfViewer()" id="pdfchatToggleBtn">收起 ◀</button>
+            <div style="display:flex;gap:5px;align-items:center">
+              <button class="abtn abtn-ghost" style="font-size:.68rem;padding:2px 8px"
+                onclick="triggerImageUpload()" title="上传截图分析">🔍 截图分析</button>
+              <input type="file" id="visionFileInput" accept="image/*" style="display:none"
+                onchange="handleVisionFile(event)">
+              <button class="abtn abtn-ghost" style="font-size:.68rem;padding:2px 8px"
+                onclick="togglePdfViewer()" id="pdfchatToggleBtn">收起 ◀</button>
+            </div>
           </div>
           <div class="pdfchat-viewer-notice" id="pdfchatViewerNotice">
             <div style="font-size:1.4rem;opacity:.3">📄</div>
@@ -884,11 +890,17 @@ input,textarea{font-family:inherit}
             </div>
           </div>
           <div class="pdfchat-input-wrap">
+            <!-- 图片预览区（粘贴/上传后显示） -->
+            <div id="visionPreviewWrap" style="display:none;margin-bottom:8px;position:relative">
+              <img id="visionPreviewImg" style="max-height:120px;max-width:100%;border-radius:6px;border:1px solid var(--border)">
+              <button onclick="clearVisionImage()" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:12px;line-height:1">×</button>
+            </div>
             <div class="pdfchat-row">
               <textarea class="pdfchat-ta" id="pdfchatInput" rows="1"
-                placeholder="问这篇文档任何问题… (Enter 发送)"
+                placeholder="问这篇文档任何问题，或粘贴截图后发送分析… (Enter 发送)"
                 onkeydown="pdfchatKey(event)"
-                oninput="pdfchatResize(this)"></textarea>
+                oninput="pdfchatResize(this)"
+                onpaste="handleVisionPaste(event)"></textarea>
               <button class="pdfchat-send" id="pdfchatSendBtn" onclick="sendPdfChat()">发送</button>
             </div>
           </div>
@@ -1418,6 +1430,112 @@ function togglePdfViewer(){
   btn.textContent = hidden ? '展开 ▶' : '收起 ◀';
 }
 
+// ── 截图 / 图像分析 ────────────────────────────────────────────────────
+let _visionB64 = '';
+let _visionMime = 'image/png';
+
+function triggerImageUpload(){
+  document.getElementById('visionFileInput').click();
+}
+
+function handleVisionFile(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  _readImageFile(file);
+  e.target.value = '';
+}
+
+function handleVisionPaste(e){
+  const items = e.clipboardData?.items;
+  if(!items) return;
+  for(const item of items){
+    if(item.type.startsWith('image/')){
+      e.preventDefault();
+      _readImageFile(item.getAsFile());
+      return;
+    }
+  }
+}
+
+function _readImageFile(file){
+  _visionMime = file.type || 'image/png';
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const dataUrl = ev.target.result;
+    _visionB64 = dataUrl.split(',')[1];
+    document.getElementById('visionPreviewImg').src = dataUrl;
+    document.getElementById('visionPreviewWrap').style.display = 'block';
+    document.getElementById('pdfchatInput').placeholder = '描述你想了解的内容，或直接发送让 AI 自动分析…';
+    document.getElementById('pdfchatInput').focus();
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearVisionImage(){
+  _visionB64 = '';
+  document.getElementById('visionPreviewWrap').style.display = 'none';
+  document.getElementById('visionPreviewImg').src = '';
+  document.getElementById('pdfchatInput').placeholder = '问这篇文档任何问题，或粘贴截图后发送分析… (Enter 发送)';
+}
+
+async function _sendVisionAnalysis(question){
+  if(!_visionB64) return false;
+  const b64 = _visionB64, mime = _visionMime;
+  clearVisionImage();
+
+  const box  = document.getElementById('pdfchatHistory');
+  const empty= document.getElementById('pdfchatEmpty'); if(empty) empty.remove();
+  const now  = new Date().toISOString();
+  const docName = document.getElementById('pdfchatDocName').textContent;
+
+  // 显示用户消息（图片缩略图 + 问题）
+  const qEl = document.createElement('div'); qEl.className='msg-group';
+  qEl.innerHTML=`<div class="msg-q"><div class="bubble" style="padding:8px">
+    <img src="data:${mime};base64,${b64}" style="max-width:200px;max-height:100px;border-radius:4px;display:block;margin-bottom:4px">
+    <span>${esc(question||'请分析这张图片')}</span>
+  </div><div class="msg-time">${formatTime(now)}</div></div>`;
+  box.appendChild(qEl); scrollPdfchat();
+
+  const aEl=document.createElement('div'); aEl.className='msg-group';
+  const aMsgDiv=document.createElement('div'); aMsgDiv.className='msg-a';
+  const bubble=document.createElement('div'); bubble.className='bubble streaming';
+  bubble.innerHTML='<span class="thinking"><span></span><span></span><span></span></span>';
+  const timeEl=document.createElement('div'); timeEl.className='msg-time'; timeEl.textContent=formatTime(now);
+  aMsgDiv.append(bubble,timeEl); aEl.appendChild(aMsgDiv); box.appendChild(aEl); scrollPdfchat();
+
+  let fullText='', rafPending=false;
+  try{
+    const res = await authFetch(`${API}/api/analyze-image/stream`,{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({image_b64:b64, image_type:mime,
+                           question:question||'请详细分析这张图片的内容，提炼关键信息。',
+                           context:docName})});
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const reader=res.body.getReader(), decoder=new TextDecoder();
+    bubble.textContent='';
+    while(true){
+      const{done,value}=await reader.read(); if(done) break;
+      for(const line of decoder.decode(value).split('\n')){
+        if(!line.startsWith('data: ')) continue;
+        const raw=line.slice(6).trim(); if(raw==='[DONE]') break;
+        try{
+          const obj=JSON.parse(raw);
+          if(obj.type==='text'){
+            fullText+=obj.text; bubble.textContent=fullText;
+            if(!rafPending){rafPending=true;requestAnimationFrame(()=>{scrollPdfchat();rafPending=false;});}
+          }
+        }catch{}
+      }
+    }
+    bubble.classList.remove('streaming');
+    pdfChatHistory.push({role:'user',content:`[图片分析] ${question||'请分析此图'}`});
+    pdfChatHistory.push({role:'assistant',content:fullText});
+  }catch(err){
+    bubble.textContent=`❌ 分析失败：${err.message}`; bubble.classList.remove('streaming');
+  }
+  return true;
+}
+
 async function _loadPdfchatSections(){
   const el=document.getElementById('pdfchatSections');
   try{
@@ -1448,6 +1566,17 @@ async function sendPdfChat(overrideQ){
   if(isPdfChatting) return;
   const input=document.getElementById('pdfchatInput');
   const q=overrideQ||input.value.trim();
+  // 如果有图片待发送，走视觉分析路径
+  if(_visionB64 && !overrideQ){
+    isPdfChatting=true;
+    document.getElementById('pdfchatSendBtn').disabled=true;
+    input.value=''; input.style.height='auto';
+    await _sendVisionAnalysis(q);
+    isPdfChatting=false;
+    document.getElementById('pdfchatSendBtn').disabled=false;
+    input.focus();
+    return;
+  }
   if(!q) return;
   isPdfChatting=true;
   document.getElementById('pdfchatSendBtn').disabled=true;
