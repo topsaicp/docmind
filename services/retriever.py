@@ -405,22 +405,36 @@ def ask(
 
     # ── 调用 LLM ──────────────────────────────────────────────────────
     if not stream:
-        resp = client.chat.completions.create(
-            model=model_id, max_tokens=4096,
-            messages=messages,
-        )
-        return resp.choices[0].message.content, sources
+        try:
+            resp = client.chat.completions.create(
+                model=model_id, max_tokens=4096,
+                messages=messages,
+            )
+            return resp.choices[0].message.content, sources
+        except Exception as e:
+            msg = str(e)
+            if "429" in msg or "rate_limit" in msg:
+                raise RuntimeError("模型调用频率超限，请稍等几分钟后重试（Groq 免费版每日 Token 有上限）")
+            raise
 
     def _stream_gen(msgs=messages, s=sources, c=client, m=model_id):
-        resp = c.chat.completions.create(
-            model=m, max_tokens=4096,
-            messages=msgs,
-            stream=True,
-        )
-        for chunk in resp:
-            delta = chunk.choices[0].delta.content
-            if delta:
-                yield delta
+        try:
+            resp = c.chat.completions.create(
+                model=m, max_tokens=4096,
+                messages=msgs,
+                stream=True,
+            )
+            for chunk in resp:
+                delta = chunk.choices[0].delta.content
+                if delta:
+                    yield delta
+        except Exception as e:
+            msg = str(e)
+            if "429" in msg or "rate_limit" in msg:
+                yield "⚠️ 模型调用频率超限，请稍等几分钟后重试（Groq 免费版每日 Token 有上限）"
+            else:
+                yield f"❌ LLM 调用失败：{msg}"
+            return
         yield {"sources": s}
 
     return _stream_gen()

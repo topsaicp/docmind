@@ -26,16 +26,16 @@ OPENAI_BASE_URL    = "https://api.openai.com/v1"
 MODEL_ROUTES: dict[str, tuple[str, str, str]] = {
     # 任务          api_key        base_url           model_id
     # -------------------------------------------------------------------
-    # 普通问答：Groq 速度快，llama-3.3-70b 中英文能力强
-    "qa":       (GROQ_API_KEY,  GROQ_BASE_URL,  "llama-3.3-70b-versatile"),
-    # 多文档对比：长上下文推理
-    "multi":    (GROQ_API_KEY,  GROQ_BASE_URL,  "llama-3.3-70b-versatile"),
-    # 文献综述：长文生成
+    # 普通问答：llama-3.1-8b-instant 速度极快，TPD 500万（免费）
+    "qa":       (GROQ_API_KEY,  GROQ_BASE_URL,  "llama-3.1-8b-instant"),
+    # 多文档对比
+    "multi":    (GROQ_API_KEY,  GROQ_BASE_URL,  "llama-3.1-8b-instant"),
+    # 文献综述：长文生成（需要更强模型时换回 llama-3.3-70b-versatile）
     "review":   (GROQ_API_KEY,  GROQ_BASE_URL,  "llama-3.3-70b-versatile"),
-    # 降率写作：流式改写
+    # 降率写作：流式改写（英文能力要求高，保留 70b）
     "writing":  (GROQ_API_KEY,  GROQ_BASE_URL,  "llama-3.3-70b-versatile"),
-    # 引用提取：轻量结构化任务
-    "cite":     (GROQ_API_KEY,  GROQ_BASE_URL,  "llama-3.3-70b-versatile"),
+    # 引用提取：轻量任务
+    "cite":     (GROQ_API_KEY,  GROQ_BASE_URL,  "llama-3.1-8b-instant"),
 }
 
 # Embedding 模型：英文为主混合场景用 BGE-M3
