@@ -133,10 +133,11 @@ def get_citation(
 
     try:
         import openai as _oa
-        _key, _base, _ = MODEL_ROUTES["cite"]
+        import re as _re
+        _key, _base, _model = MODEL_ROUTES["cite"]
         client = _oa.OpenAI(api_key=_key, base_url=_base)
         resp = client.chat.completions.create(
-            model=LLM_MODEL,
+            model=_model,
             messages=[{"role": "user", "content": (
                 "从以下学术文献首页内容中提取文献元数据，以严格JSON格式返回（无法提取的字段用空字符串，"
                 "authors 为作者姓名的字符串数组）。\n\n"
@@ -150,13 +151,14 @@ def get_citation(
             max_tokens=600,
         )
         raw = resp.choices[0].message.content.strip()
-        if "```" in raw:
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
+        # 兼容带/不带 ```json ``` 包裹的输出
+        m = _re.search(r"```(?:json)?\s*([\s\S]+?)\s*```", raw)
+        if m:
+            raw = m.group(1)
         meta = json.loads(raw.strip())
         meta["filename"] = doc.original_name
         return meta
     except Exception as e:
-        _fallback["_note"] = f"元数据提取失败，请检查首页内容是否清晰：{e}"
+        print(f"[cite] 元数据提取失败: {e}")
+        _fallback["_note"] = f"元数据提取失败：{e}"
         return _fallback
