@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DocMind · PDF 知识库问答</title>
-<meta name="description" content="上传PDF，构建私人知识库，支持按章节精读与AI智能问答。">
+<title>DocMind · AI 学术研究助手</title>
+<meta name="description" content="上传PDF，构建私人知识库。支持多文献问答、PDF精读对话、截图分析、文献综述、论文撰写与英文降率处理。">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Noto+Sans+SC:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -432,12 +432,12 @@ input, textarea { font-family: inherit; }
   <div class="wrap" style="position:relative">
     <div class="hero-badge">
       <span class="hero-badge-dot"></span>
-      基于 RAG 技术 · 私有化部署 · 数据不出境
+      基于 RAG 技术 · DeepSeek · Gemini 视觉分析
     </div>
     <h1 class="hero-h1">让 PDF 文献<br><span class="accent">开口说话</span></h1>
     <p class="hero-sub">
-      上传学术论文或任意 PDF，系统自动解析章节结构，
-      支持自由提问与按章节精读——摘要、引言、结论，一键定向解读。
+      上传学术论文或任意 PDF，构建私人知识库。支持多文献问答、PDF 精读对话、
+      图表截图分析、文献综述生成、论文撰写辅助与英文降率处理。
     </p>
     <div class="hero-btns">
       <a href="/app" class="btn-hero-primary" id="heroPrimaryBtn">立即上传文献 →</a>
@@ -475,9 +475,9 @@ input, textarea { font-family: inherit; }
             该论文提出了 Transformer 架构，完全基于注意力机制，摒弃了循环结构。核心创新在于 Multi-Head Self-Attention 机制，允许模型并行处理序列…
             <div class="mockup-src">📎 attention_is_all_you_need.pdf · Abstract（摘要）</div>
           </div>
-          <div class="mockup-msg-q">实验结果如何？</div>
+          <div class="mockup-msg-q">🖼 [框选截图：Figure 1 架构图] 解释这个结构图</div>
           <div class="mockup-msg-a">
-            WMT 2014 英德翻译任务取得 28.4 BLEU，超越此前最优模型 2.0 分，仅需 8 个 GPU 训练 3.5 天…
+            图中展示了 Encoder-Decoder 结构。左侧 Encoder 由 6 层堆叠组成，每层含 Multi-Head Attention 和前馈网络；右侧 Decoder 额外增加了对 Encoder 输出的交叉注意力层…
           </div>
         </div>
       </div>
@@ -488,9 +488,9 @@ input, textarea { font-family: inherit; }
 <!-- ═══ STATS ══════════════════════════════════════════════════ -->
 <section id="stats-strip">
   <div class="stats-grid">
-    <div><div class="stat-num">98%</div><div class="stat-label">章节结构识别准确率</div></div>
+    <div><div class="stat-num">6+</div><div class="stat-label">核心学术功能模块</div></div>
     <div><div class="stat-num">&lt; 3s</div><div class="stat-label">平均问答响应时间</div></div>
-    <div><div class="stat-num">双语</div><div class="stat-label">中英文检索全支持</div></div>
+    <div><div class="stat-num">10+</div><div class="stat-label">支持引用格式种类</div></div>
   </div>
 </section>
 
@@ -505,17 +505,17 @@ input, textarea { font-family: inherit; }
       <div class="step-card">
         <div class="step-num">1</div>
         <div class="step-title">上传 PDF 文献</div>
-        <div class="step-desc">支持英文、中文学术论文。系统自动检测语言，英文论文用 PyMuPDF 精准解析章节标题与字体结构，中文论文用 MarkItDown 提取全文。</div>
+        <div class="step-desc">支持英文、中文学术论文及任意文字型 PDF。系统自动检测语言，英文论文用 PyMuPDF 精准解析章节结构，中文文档用 MarkItDown 提取全文，自动去除参考文献噪音。</div>
       </div>
       <div class="step-card">
         <div class="step-num">2</div>
-        <div class="step-title">向量化入库</div>
-        <div class="step-desc">文本按章节切分后，由本地 BCEmbedding 模型转化为 768 维向量，存入 Chroma 向量数据库。数据完全本地处理，不上传任何第三方服务器。</div>
+        <div class="step-title">语义向量化入库</div>
+        <div class="step-desc">文本按章节切分后，由 Jina AI 向量化 API 转化为高维语义向量，存入 Chroma 向量数据库。支持中英双语语义检索，章节名采用「Abstract（摘要）」双语格式存储。</div>
       </div>
       <div class="step-card">
         <div class="step-num">3</div>
         <div class="step-title">精准检索 + AI 作答</div>
-        <div class="step-desc">提问时从向量库检索最相关的文本块，结合 DeepSeek 大模型生成有据可查的中文回答，并标注来源章节与相关度分数。</div>
+        <div class="step-desc">提问时检索最相关文本块，由 DeepSeek 主力模型生成有据可查的回答并标注来源章节。遇到图表可框选截图，Gemini 视觉模型实时解读图表与公式内容。</div>
       </div>
     </div>
   </div>
@@ -531,33 +531,33 @@ input, textarea { font-family: inherit; }
     <div class="features-grid">
       <div class="feat-card">
         <div class="feat-icon">📖</div>
-        <div class="feat-title">章节定向解读</div>
-        <div class="feat-desc">点击「📖 章节」展开论文结构，选择摘要、引言、方法、结论等任意章节，AI 精准定位该节内容并深度解读，不受其他章节干扰。</div>
+        <div class="feat-title">PDF 精读对话</div>
+        <div class="feat-desc">三栏布局：左侧章节目录 + 中栏 PDF 原文阅读 + 右栏 AI 对话。可框选页面任意区域截图，由 Gemini 视觉模型实时解读图表、公式和表格，也可粘贴/上传图片分析。</div>
       </div>
       <div class="feat-card">
-        <div class="feat-icon">🔍</div>
-        <div class="feat-title">跨文献智能检索</div>
-        <div class="feat-desc">同时选中多篇文献提问，系统对每篇单独检索代表性内容，输出逐篇分析报告并附综合对比，彻底解决「只看到一篇」的问题。</div>
+        <div class="feat-icon">💬</div>
+        <div class="feat-title">多文献知识库问答</div>
+        <div class="feat-desc">同时勾选多篇文献提问，系统对每篇单独检索代表性内容，输出逐篇分析报告及综合对比。支持按章节定向提问（摘要、方法、结论），可开启联网检索补充最新信息。</div>
       </div>
       <div class="feat-card">
-        <div class="feat-icon">🌐</div>
-        <div class="feat-title">中英双语检索</div>
-        <div class="feat-desc">章节名采用「Abstract（摘要）」双语格式存储，用中文问英文论文均可正确匹配，消除语言屏障，支持中英混合知识库。</div>
+        <div class="feat-icon">📝</div>
+        <div class="feat-title">文献综述生成</div>
+        <div class="feat-desc">勾选多篇文献并输入综述主题，一键生成结构完整的文献综述，覆盖研究背景、各文献核心观点及对比分析，支持一键复制与导出 .txt 文件。</div>
       </div>
       <div class="feat-card">
-        <div class="feat-icon">💾</div>
-        <div class="feat-title">对话历史持久化</div>
-        <div class="feat-desc">所有问答记录自动保存至本地存储，刷新页面后历史对话完整保留，支持回顾与延续研读脉络，最多保存 100 条记录。</div>
+        <div class="feat-icon">✍️</div>
+        <div class="feat-title">论文章节撰写</div>
+        <div class="feat-desc">提供摘要、引言、文献综述、研究方法、实验结果、讨论与结论等标准章节框架，结合已上传文献内容逐章 AI 辅助撰写，支持一键生成全文并导出。</div>
       </div>
       <div class="feat-card">
-        <div class="feat-icon">🏗️</div>
-        <div class="feat-title">结构噪音过滤</div>
-        <div class="feat-desc">自动识别并排除参考文献、致谢等章节，避免高密度关键词的参考文献列表干扰正文检索，确保每次检索命中真实内容。</div>
+        <div class="feat-icon">✂️</div>
+        <div class="feat-title">英文降率工具</div>
+        <div class="feat-desc">支持「降 AI 率」「降重复率」「双降」三种模式，分块流式输出结果。AI 率超 20% 全额退，人工服务 24 小时交付，赠 Turnitin 官方检测报告。</div>
       </div>
       <div class="feat-card">
-        <div class="feat-icon">🔒</div>
-        <div class="feat-title">完全私有部署</div>
-        <div class="feat-desc">Embedding 模型本地运行，向量数据存于本地 Chroma，PDF 文件不离开服务器。仅 LLM 推理调用 DeepSeek API，其余全程离线。</div>
+        <div class="feat-icon">📎</div>
+        <div class="feat-title">引用格式导出</div>
+        <div class="feat-desc">自动从 PDF 首页提取文献元数据（作者、标题、期刊、年份），一键生成 GB/T 7714、APA、MLA、BibTeX、EndNote、NoteExpress 等 10 余种引用格式，支持复制与导出。</div>
       </div>
     </div>
   </div>
@@ -580,9 +580,11 @@ input, textarea { font-family: inherit; }
         <div class="plan-price"><span class="plan-price-num">免费</span></div>
         <ul class="plan-features">
           <li><span class="plan-check">✦</span> 最多 5 篇 PDF</li>
-          <li><span class="plan-check">✦</span> 基础问答功能</li>
-          <li><span class="plan-check">✦</span> 章节解读</li>
-          <li><span class="plan-check">✦</span> 对话历史保存</li>
+          <li><span class="plan-check">✦</span> 知识库问答 + 章节精读</li>
+          <li><span class="plan-check">✦</span> PDF 精读对话（含截图分析）</li>
+          <li><span class="plan-check">✦</span> 文献综述 + 论文撰写</li>
+          <li><span class="plan-check">✦</span> 引用格式导出</li>
+          <li><span class="plan-check">✦</span> 每日 20 次问答</li>
         </ul>
         <a href="/app" class="btn-plan-ghost">免费开始</a>
       </div>
@@ -596,9 +598,10 @@ input, textarea { font-family: inherit; }
         </div>
         <ul class="plan-features">
           <li><span class="plan-check">✦</span> 无限 PDF 上传</li>
-          <li><span class="plan-check">✦</span> 多文献对比分析</li>
+          <li><span class="plan-check">✦</span> 全部基础版功能</li>
+          <li><span class="plan-check">✦</span> 不限每日问答次数</li>
+          <li><span class="plan-check">✦</span> 英文降率工具（AI 率 + 重复率）</li>
           <li><span class="plan-check">✦</span> 优先 API 配额</li>
-          <li><span class="plan-check">✦</span> 章节精读 + 跨文献检索</li>
           <li><span class="plan-check">✦</span> 优先客服支持</li>
         </ul>
         <button class="btn-plan-primary" onclick="openPayment('pro')">立即订阅</button>
@@ -612,9 +615,9 @@ input, textarea { font-family: inherit; }
         </div>
         <ul class="plan-features">
           <li><span class="plan-check">✦</span> 多用户席位（≤20）</li>
+          <li><span class="plan-check">✦</span> 全部专业版功能</li>
+          <li><span class="plan-check">✦</span> 人工降率服务优先通道</li>
           <li><span class="plan-check">✦</span> 私有化部署支持</li>
-          <li><span class="plan-check">✦</span> API 接口访问</li>
-          <li><span class="plan-check">✦</span> 定制化集成</li>
           <li><span class="plan-check">✦</span> 专属客服经理</li>
         </ul>
         <a href="mailto:njjimchen@protonmail.com?subject=DocMind机构版咨询" class="btn-plan-ghost">联系我们</a>
@@ -686,20 +689,24 @@ input, textarea { font-family: inherit; }
     </div>
     <div class="faq-list">
       <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">上传的 PDF 数据会上传到云端吗？<span class="faq-chevron">▾</span></button>
-        <div class="faq-a">不会。PDF 文件存储在您的本地服务器，Embedding 向量化也在本地完成（BCEmbedding 本地运行），只有生成回答时会将检索到的文本片段发送给 DeepSeek API。</div>
+        <button class="faq-q" onclick="toggleFaq(this)">上传的 PDF 数据会发送给第三方吗？<span class="faq-chevron">▾</span></button>
+        <div class="faq-a">PDF 文件存储在服务器，不会公开。处理时文本片段会发送给以下第三方 API：Jina AI（向量化）、DeepSeek（问答/综述/撰写）、Gemini（图表截图分析）。原始 PDF 文件不会发送给任何 AI 服务，仅发送提取后的文本片段。</div>
       </div>
       <div class="faq-item">
         <button class="faq-q" onclick="toggleFaq(this)">支持哪些类型的 PDF？<span class="faq-chevron">▾</span></button>
-        <div class="faq-a">支持中英文学术论文、报告、书籍等文字型 PDF。系统自动检测语言，英文论文使用 PyMuPDF 结构化提取识别章节标题，中文文档使用 MarkItDown 提取。扫描件有基础 OCR 兜底，效果受原图质量影响。</div>
+        <div class="faq-a">支持中英文学术论文、报告、书籍等文字型 PDF，单文件最大 50MB。系统自动检测语言，英文论文使用 PyMuPDF 精准解析章节结构，中文文档使用 MarkItDown 提取。纯扫描件无文字层的效果较差。</div>
       </div>
       <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">为什么英文论文的章节能被识别？<span class="faq-chevron">▾</span></button>
-        <div class="faq-a">系统使用 PyMuPDF dict 模式提取每个字符的字体大小和粗体标志，通过"字号比正文大15%"或"全块粗体+匹配章节名"来判断标题行，并将章节名转为「Abstract（摘要）」双语格式，使中英文查询都能命中。</div>
+        <button class="faq-q" onclick="toggleFaq(this)">PDF 精读的「框选分析」如何使用？<span class="faq-chevron">▾</span></button>
+        <div class="faq-a">进入精读页面后，点击顶部「✂️ 框选分析」按钮，鼠标变为十字形，在 PDF 上拖动选择任意区域（图表、公式、表格均可），松开后右侧对话框出现截图预览，可直接发送或输入追问内容，Gemini 视觉模型将实时分析图片内容。</div>
       </div>
       <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">选中多篇文献提问时为何之前只看到一篇内容？<span class="faq-chevron">▾</span></button>
-        <div class="faq-a">旧版中 top_k=5 导致相似度最高的那篇占满配额。已修复：检测到「分析/对比/所有/这些」等词且选中多篇文献时，系统对每篇单独检索代表性块（优先摘要/引言/结论），再合并给 LLM 逐篇分析。</div>
+        <button class="faq-q" onclick="toggleFaq(this)">选中多篇文献提问时如何确保每篇都有回答？<span class="faq-chevron">▾</span></button>
+        <div class="faq-a">选中多篇文献时，系统对每篇单独检索代表性内容块（优先摘要、引言、结论），再合并给 AI 逐篇分析并输出综合对比。不会出现某一篇独占全部回答的情况。</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">降率工具支持中文吗？退款怎么申请？<span class="faq-chevron">▾</span></button>
+        <div class="faq-a">当前 AI 自动降率仅支持英文（.txt / .docx）。中文降率可选择「人工服务」，发送文件至 njjimchen@protonmail.com 获取报价。退款申请：AI 自动模式达到退款条件（AI 率超 20% 或重复率超 15%），发邮件附 Turnitin 报告截图，48 小时内处理。</div>
       </div>
       <div class="faq-item">
         <button class="faq-q" onclick="toggleFaq(this)">如何取消订阅？<span class="faq-chevron">▾</span></button>
@@ -728,7 +735,7 @@ input, textarea { font-family: inherit; }
     <div class="footer-grid">
       <div>
         <div class="brand"><div class="brand-icon">📚</div><span class="brand-name">DocMind</span></div>
-        <div class="footer-brand-desc">AI 驱动的 PDF 知识库问答系统，让文献研读更高效、更精准。</div>
+        <div class="footer-brand-desc">AI 驱动的学术研究助手——PDF 问答、精读对话、截图分析、文献综述、论文撰写、英文降率，一站搞定。</div>
       </div>
       <div>
         <div class="footer-col-title">产品</div>
@@ -756,7 +763,7 @@ input, textarea { font-family: inherit; }
     </div>
     <div class="footer-bottom">
       <span>© 2026 DocMind. 保留所有权利。</span>
-      <span style="font-family:'Courier New',monospace;font-size:.7rem">私有化部署 · 数据不出境 · 学术研究辅助工具</span>
+      <span style="font-family:'Courier New',monospace;font-size:.7rem">DeepSeek · Gemini · Jina AI · 学术研究辅助工具</span>
     </div>
   </div>
 </footer>
