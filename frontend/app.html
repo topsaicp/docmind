@@ -778,7 +778,10 @@ input,textarea{font-family:inherit}
         <div class="rev-doc-panel">
           <div class="rev-doc-header">
             选择文献（可多选）
-            <button class="abtn abtn-ghost" style="font-size:.62rem;padding:2px 7px" onclick="toggleRevSelectAll()">全选/取消</button>
+            <div style="display:flex;align-items:center;gap:5px">
+              <span id="revPlanBadge" style="font-size:.6rem;padding:1px 6px;border-radius:10px;background:rgba(201,168,76,.15);color:var(--gold)"></span>
+              <button class="abtn abtn-ghost" style="font-size:.62rem;padding:2px 7px" onclick="toggleRevSelectAll()">全选/取消</button>
+            </div>
           </div>
           <div class="rev-doc-list" id="revDocList">
             <div class="rev-doc-empty">暂无文献，请先上传</div>
@@ -846,7 +849,7 @@ input,textarea{font-family:inherit}
       <div class="page-header">
         <span class="page-title">✂️ 降率工具</span>
         <div class="page-actions">
-          <span style="font-size:.72rem;color:var(--muted)">English only · 支持 .docx / .txt</span>
+          <span style="font-size:.72rem;color:var(--muted)">English only · 支持 .docx / .txt · <span id="reduceLimitBadge"></span></span>
         </div>
       </div>
       <div class="reduce-layout">
@@ -1066,6 +1069,14 @@ const API = '';
 const HISTORY_KEY = 'kb_chat_history_v2';
 let currentUser    = null;
 let authMode       = 'login';
+
+// ── 套餐限额（与 config.py PLAN_LIMITS 保持一致）──
+const PLAN_LIMITS = {
+  free: { maxTokens:2048, reviewMaxDocs:3,  reduceMaxWords:800,  dailyQuery:20,  pdfLimit:5   },
+  pro:  { maxTokens:8192, reviewMaxDocs:20, reduceMaxWords:10000,dailyQuery:500, pdfLimit:100 },
+};
+function getPlanLimits(){ return PLAN_LIMITS[currentUser?.plan] || PLAN_LIMITS.free; }
+function isPro(){ return currentUser?.plan === 'pro'; }
 let selectedDocs   = new Set();   // for Q&A + writing
 let reviewDocs     = new Set();   // for 文献综述 page (independent)
 let libSelected    = new Set();   // for batch delete in library
@@ -1137,7 +1148,7 @@ async function checkAuth(){
   }catch{ openAuth(); }
 }
 function onAuthSuccess(){
-  updateTopbar(); loadDocuments(); renderHistory();
+  updateTopbar(); loadDocuments(); renderHistory(); updatePlanBadges();
 }
 function updateTopbar(){
   if(!currentUser) return;
@@ -1165,11 +1176,11 @@ function goPage(name){
   qaBar.classList.toggle('show', name==='qa');
   if(name==='qa'){ updateDspUsage(); updateDspSelectTip(); }
   if(name==='write') updateWriteDocCount();
-  if(name==='review'){ renderRevDocList(allDocs); updateRevDocCount(); }
+  if(name==='review'){ renderRevDocList(allDocs); updateRevDocCount(); updatePlanBadges(); }
   if(name==='account') renderAccount();
   if(name==='history') renderHistoryPage();
   if(name==='library') loadLibStats();
-  if(name==='reduce')  resetReduce(false);
+  if(name==='reduce'){ resetReduce(false); updatePlanBadges(); }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1223,6 +1234,18 @@ function toggleRevSelectAll(){
 function updateRevDocCount(){
   const el=document.getElementById('reviewDocCount');
   if(el) el.textContent=reviewDocs.size>0?reviewDocs.size:'全部';
+}
+
+function updatePlanBadges(){
+  if(!currentUser) return;
+  const lim   = getPlanLimits();
+  const label = isPro() ? '专业版' : '免费版';
+  // 综述页套餐标识
+  const rb = document.getElementById('revPlanBadge');
+  if(rb) rb.textContent = `${label} · 最多 ${lim.reviewMaxDocs} 篇`;
+  // 降率页字数上限
+  const rlb = document.getElementById('reduceLimitBadge');
+  if(rlb) rlb.textContent = `${label} · ${lim.reduceMaxWords.toLocaleString()} 词/次`;
 }
 
 function renderLibDocList(docs){
@@ -2176,6 +2199,13 @@ async function startReview(){
   const docIds     = reviewDocs.size>0 ? [...reviewDocs] : allDocs.filter(d=>d.status==='ready').map(d=>d.doc_id);
   const extraText  = document.getElementById('revExtraText').value.trim();
   if(!docIds.length && !extraText){ alert('请先在左侧勾选文献，或在「文本参考资料」中粘贴内容'); return; }
+  const limits = getPlanLimits();
+  if(docIds.length > limits.reviewMaxDocs){
+    const msg = isPro()
+      ? `当前套餐最多支持 ${limits.reviewMaxDocs} 篇文献同时生成综述`
+      : `免费版最多选 ${limits.reviewMaxDocs} 篇文献，专业版可提升至 ${PLAN_LIMITS.pro.reviewMaxDocs} 篇`;
+    alert(msg); return;
+  }
   const topic = document.getElementById('reviewTopic').value.trim();
   const sourceDesc = docIds.length && extraText ? `${docIds.length} 篇文献及附加参考资料`
     : docIds.length ? `${docIds.length} 篇文献`
@@ -2674,6 +2704,14 @@ async function startReduce(){
   const text = document.getElementById('reduceText').value.trim();
   if(!text){ alert('请输入文本'); return; }
   if(isReducing) return;
+  const wc = text.split(/\s+/).length;
+  const limits = getPlanLimits();
+  if(wc > limits.reduceMaxWords){
+    const tip = isPro()
+      ? `文本超出专业版上限（${wc} 词 > ${limits.reduceMaxWords} 词）`
+      : `免费版单次上限 ${limits.reduceMaxWords} 词，当前 ${wc} 词。升级专业版可处理最多 ${PLAN_LIMITS.pro.reduceMaxWords} 词`;
+    alert(tip); return;
+  }
   isReducing = true;
   const btn = document.getElementById('reduceStartBtn');
   btn.disabled = true; btn.textContent = '⏳ 处理中…';

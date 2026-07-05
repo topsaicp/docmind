@@ -5,7 +5,7 @@
 import urllib.parse
 import requests as _requests
 from openai import OpenAI
-from config import MODEL_ROUTES, MODEL_FALLBACK, TOP_K, JINA_API_KEY
+from config import MODEL_ROUTES, MODEL_FALLBACK, TOP_K, JINA_API_KEY, get_limits
 from services.embedder import search, get_doc_sections, get_doc_header, expand_hits_to_parent
 
 _clients: dict[str, OpenAI] = {}   # 主路由 client 缓存
@@ -279,6 +279,7 @@ def ask(
     history:   list[dict] | None = None,   # [{role:"user",content:...}, ...]
     use_web:   bool = False,               # 是否附加联网检索结果
     extra_context: str = "",               # 直接粘贴的文本参考资料
+    plan:      str = "free",              # 用户套餐，影响 max_tokens / chunks
 ):
     # ── 任务类型解析（显式 task_hint 优先；否则关键词自动检测）──
     has_pdf   = bool(doc_ids and len(doc_ids) >= 1)
@@ -302,8 +303,10 @@ def ask(
         target_ids = doc_ids if has_pdf else []
 
         # ── PDF 检索部分 ──
+        limits = get_limits(plan)
         if has_pdf:
-            per_doc   = retrieve_per_doc_for_review(question, target_ids, chunks_per_doc=12)
+            per_doc   = retrieve_per_doc_for_review(question, target_ids,
+                            chunks_per_doc=limits["review_chunks"])
             context, sources = build_multi_doc_context(per_doc)
             doc_count = len([v for v in per_doc.values() if v])
             header_parts = []
@@ -424,11 +427,19 @@ def ask(
     trimmed_hist = hist[-6:] if len(hist) > 6 else hist
     messages = trimmed_hist + [{"role": "user", "content": prompt}]
 
+    # ── 按套餐确定 max_tokens ─────────────────────────────────────────
+    # review/writing 类长文任务用套餐上限；问答类保持合理上限避免浪费
+    _limits = get_limits(plan)
+    if task in ("review", "writing"):
+        max_tok = _limits["max_tokens"]
+    else:
+        max_tok = min(_limits["max_tokens"], 2048)   # 问答不超 2048
+
     # ── 调用 LLM（主路由失败自动降级备用）──────────────────────────────
     if not stream:
         try:
             resp = client.chat.completions.create(
-                model=model_id, max_tokens=4096, messages=messages,
+                model=model_id, max_tokens=max_tok, messages=messages,
             )
             return resp.choices[0].message.content, sources
         except Exception as e:
@@ -437,15 +448,15 @@ def ask(
                 if fb:
                     fc, fm = fb
                     resp = fc.chat.completions.create(
-                        model=fm, max_tokens=4096, messages=messages,
+                        model=fm, max_tokens=max_tok, messages=messages,
                     )
                     return resp.choices[0].message.content, sources
             raise
 
-    def _stream_gen(msgs=messages, s=sources, c=client, m=model_id, t=task):
+    def _stream_gen(msgs=messages, s=sources, c=client, m=model_id, t=task, mt=max_tok):
         try:
             resp = c.chat.completions.create(
-                model=m, max_tokens=4096, messages=msgs, stream=True,
+                model=m, max_tokens=mt, messages=msgs, stream=True,
             )
             for chunk in resp:
                 delta = chunk.choices[0].delta.content
@@ -458,7 +469,7 @@ def ask(
                     fc, fm = fb
                     try:
                         resp2 = fc.chat.completions.create(
-                            model=fm, max_tokens=4096, messages=msgs, stream=True,
+                            model=fm, max_tokens=mt, messages=msgs, stream=True,
                         )
                         for chunk in resp2:
                             delta = chunk.choices[0].delta.content

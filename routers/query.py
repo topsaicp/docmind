@@ -16,8 +16,18 @@ import json
 from services.retriever import ask
 from services.embedder  import collection_count, get_doc_sections, get_doc_header
 from db.database import get_session, User, Document
-from config import FREE_QUERY_DAILY_LIMIT, MODEL_ROUTES, LLM_MODEL
+from config import FREE_QUERY_DAILY_LIMIT, MODEL_ROUTES, LLM_MODEL, get_limits
 from routers.auth import get_current_user
+from datetime import datetime
+
+
+def effective_plan(user: User) -> str:
+    """计算用户实际套餐（考虑到期 + admin 等同 pro）。"""
+    if user.is_admin:
+        return "pro"
+    if user.plan == "pro" and user.plan_expires_at and user.plan_expires_at < datetime.utcnow():
+        return "free"
+    return user.plan or "free"
 
 router = APIRouter(prefix="/api", tags=["query"])
 
@@ -64,6 +74,7 @@ def ask_question(req: AskRequest, session: Session = Depends(get_session),
         history       = [{"role": m.role, "content": m.content} for m in req.history],
         use_web       = req.use_web,
         extra_context = req.extra_context,
+        plan          = effective_plan(current_user),
     )
     return {"question": req.question, "answer": answer, "sources": sources}
 
@@ -81,12 +92,15 @@ def ask_stream(req: AskRequest, session: Session = Depends(get_session),
     history   = [{"role": m.role, "content": m.content} for m in req.history]
     use_web   = req.use_web
 
+    plan = effective_plan(current_user)
+
     def event_generator():
         try:
             gen = ask(req.question, stream=True,
                       doc_ids=doc_ids, section=section, task_hint=task_hint,
                       history=history, use_web=use_web,
-                      extra_context=req.extra_context)
+                      extra_context=req.extra_context,
+                      plan=plan)
             for chunk in gen:
                 if isinstance(chunk, dict):
                     yield f"data: {json.dumps({'type':'sources','sources':chunk['sources']}, ensure_ascii=False)}\n\n"

@@ -70,9 +70,33 @@ SECRET_KEY   = os.getenv("SECRET_KEY", "docmind-dev-secret-change-in-prod")
 ADMIN_SECRET = os.getenv("ADMIN_SECRET", "admin123")
 JWT_EXPIRE_DAYS = 30
 
-# 免费套餐限额
-FREE_PDF_LIMIT         = 5
-FREE_QUERY_DAILY_LIMIT = 20
+# ── 套餐限额配置表 ────────────────────────────────────────────────────
+PLAN_LIMITS: dict[str, dict] = {
+    "free": {
+        "max_tokens":        2048,   # LLM 单次最大输出 token
+        "review_chunks":     6,      # 综述：每篇文献检索块数
+        "review_max_docs":   3,      # 综述：最多选取文献篇数
+        "reduce_max_words":  800,    # 降率工具：单次最大英文单词数
+        "daily_query_limit": 20,     # 每日提问次数上限
+        "pdf_limit":         5,      # 可上传 PDF 总数
+    },
+    "pro": {
+        "max_tokens":        8192,
+        "review_chunks":     12,
+        "review_max_docs":   20,
+        "reduce_max_words":  10000,
+        "daily_query_limit": 500,
+        "pdf_limit":         100,
+    },
+}
+
+def get_limits(plan: str) -> dict:
+    """返回套餐对应的限制参数；admin 视为 pro；未知套餐视为 free。"""
+    return PLAN_LIMITS.get(plan, PLAN_LIMITS["free"])
+
+# 兼容旧引用
+FREE_PDF_LIMIT         = PLAN_LIMITS["free"]["pdf_limit"]
+FREE_QUERY_DAILY_LIMIT = PLAN_LIMITS["free"]["daily_query_limit"]
 
 # 文件限制
 MAX_FILE_SIZE_MB = 50
