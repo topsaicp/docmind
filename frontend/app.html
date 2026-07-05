@@ -2640,9 +2640,9 @@ async function _streamReduceResponse(response){
 
   const reader  = response.body.getReader();
   const decoder = new TextDecoder();
-  let buf='', totalChunks=1, doneChunks=0;
+  let buf='', totalChunks=1, doneChunks=0, finished=false;
 
-  while(true){
+  outer: while(true){
     const {done,value} = await reader.read();
     if(done) break;
     buf += decoder.decode(value, {stream:true});
@@ -2650,13 +2650,13 @@ async function _streamReduceResponse(response){
     for(const line of lines){
       if(!line.startsWith('data:')) continue;
       const payload = line.slice(5).trim();
-      if(payload==='[DONE]') break;
+      if(payload==='[DONE]'){ finished=true; break outer; }
       try{
         const ev = JSON.parse(payload);
         if(ev.type==='meta'){
           totalChunks = ev.total_chunks;
           document.getElementById('reduceProgress').innerHTML =
-            `共 <strong>${ev.total_words.toLocaleString()}</strong> 词 · 预计 <strong>${ev.est_minutes}</strong> 分钟`;
+            `共 <strong>${ev.total_words.toLocaleString()}</strong> 词 · 预计 <strong>${ev.est_minutes}</strong> 分钟 · ${totalChunks} 块`;
         } else if(ev.type==='chunk_start'){
           document.getElementById('reduceProgress').innerHTML =
             `处理中 <strong>${doneChunks+1}/${totalChunks}</strong> 块…`;
@@ -2664,6 +2664,9 @@ async function _streamReduceResponse(response){
             Math.round(doneChunks/totalChunks*100)+'%';
         } else if(ev.type==='text'){
           rt.textContent += ev.text;
+          // 自动滚动结果区
+          const scroll = rt.closest('.reduce-result-scroll');
+          if(scroll) scroll.scrollTop = scroll.scrollHeight;
         } else if(ev.type==='chunk_done'){
           doneChunks++;
           document.getElementById('reducePrgFill').style.width =
@@ -2674,8 +2677,10 @@ async function _streamReduceResponse(response){
           document.getElementById('reduceProgress').innerHTML =
             `✅ 处理完成 · <strong>${doneChunks}</strong> 块`;
           document.getElementById('reduceActions').style.display = 'flex';
+          finished = true; break outer;
         } else if(ev.type==='error'){
           document.getElementById('reduceProgress').textContent = '❌ ' + ev.text;
+          finished = true; break outer;
         }
       }catch(_){}
     }

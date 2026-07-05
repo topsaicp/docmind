@@ -4,7 +4,7 @@
 """
 import re
 from openai import OpenAI
-from config import MODEL_ROUTES
+from config import MODEL_ROUTES, MODEL_FALLBACK
 
 _PROMPTS = {
     "ai": (
@@ -58,8 +58,45 @@ _PROMPTS = {
     ),
 }
 
-_CHUNK_WORDS = {"ai": 600, "dup": 500, "both": 400}
+_CHUNK_WORDS = {"ai": 500, "dup": 450, "both": 350}  # 适当缩小，避免 Groq TPM 超限
 _SPEED_MIN   = {"ai": 2.0, "dup": 2.0, "both": 3.0}
+
+_primary_client:  OpenAI | None = None
+_fallback_client: OpenAI | None = None
+
+
+def _get_primary() -> tuple[OpenAI, str]:
+    global _primary_client
+    key, base, model = MODEL_ROUTES.get("writing", MODEL_ROUTES["qa"])
+    if _primary_client is None:
+        _primary_client = OpenAI(api_key=key, base_url=base)
+    return _primary_client, model
+
+
+def _get_fallback() -> tuple[OpenAI, str]:
+    global _fallback_client
+    key, base, model = MODEL_FALLBACK.get("writing", MODEL_ROUTES["qa"])
+    if _fallback_client is None:
+        _fallback_client = OpenAI(api_key=key, base_url=base)
+    return _fallback_client, model
+
+
+def _is_rate_limit(e: Exception) -> bool:
+    err = str(e).lower()
+    return "429" in err or "rate_limit" in err or "rate limit" in err
+
+
+def _stream_chunk(client: OpenAI, model: str, system_prompt: str, chunk: str):
+    """流式输出单块改写结果，返回 (delta_generator, error_or_None)"""
+    return client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user",   "content": chunk},
+        ],
+        max_tokens=4096,
+        stream=True,
+    )
 
 
 def estimate_minutes(text: str, mode: str) -> float:
@@ -142,29 +179,55 @@ def reduce_stream(text: str, mode: str):
         "est_minutes":  estimate_minutes(text, mode),
     }
 
-    api_key, base_url, model_id = MODEL_ROUTES.get("writing", MODEL_ROUTES["qa"])
-    client = OpenAI(api_key=api_key, base_url=base_url)
     system_prompt = _PROMPTS[mode]
 
     for idx, chunk in enumerate(chunks):
         yield {"type": "chunk_start", "chunk_idx": idx, "total": total}
+
+        # 先用主路由，429 时自动切换到备用路由
+        client, model_id = _get_primary()
+        used_fallback = False
         try:
-            stream = client.chat.completions.create(
-                model    = model_id,
-                messages = [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user",   "content": chunk},
-                ],
-                max_tokens = 4096,
-                stream     = True,
-            )
+            stream = _stream_chunk(client, model_id, system_prompt, chunk)
+        except Exception as e:
+            if _is_rate_limit(e):
+                client, model_id = _get_fallback()
+                used_fallback = True
+                try:
+                    stream = _stream_chunk(client, model_id, system_prompt, chunk)
+                except Exception as e2:
+                    yield {"type": "error", "text": f"第 {idx+1}/{total} 块失败（主备均不可用）: {e2}"}
+                    return
+            else:
+                yield {"type": "error", "text": f"第 {idx+1}/{total} 块处理失败: {e}"}
+                return
+
+        if used_fallback:
+            yield {"type": "text", "text": ""}  # 通知前端已切换（内容不影响）
+            print(f"[reduce] 块 {idx+1}/{total} 切换到备用模型 {model_id}")
+
+        try:
             for part in stream:
                 delta = part.choices[0].delta.content
                 if delta:
                     yield {"type": "text", "text": delta}
         except Exception as e:
-            yield {"type": "error", "text": f"第 {idx+1}/{total} 块处理失败: {e}"}
-            return
+            if _is_rate_limit(e) and not used_fallback:
+                # 流式中途遇到 429，当前块已输出部分内容，换行后用备用模型重新生成该块
+                yield {"type": "text", "text": "\n\n[切换到备用模型重新生成此块]\n\n"}
+                fb_client, fb_model = _get_fallback()
+                try:
+                    fb_stream = _stream_chunk(fb_client, fb_model, system_prompt, chunk)
+                    for part in fb_stream:
+                        delta = part.choices[0].delta.content
+                        if delta:
+                            yield {"type": "text", "text": delta}
+                except Exception as e3:
+                    yield {"type": "error", "text": f"第 {idx+1}/{total} 块备用模型也失败: {e3}"}
+                    return
+            else:
+                yield {"type": "error", "text": f"第 {idx+1}/{total} 块流式失败: {e}"}
+                return
 
         yield {"type": "chunk_done", "chunk_idx": idx}
 
