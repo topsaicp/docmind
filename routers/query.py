@@ -47,6 +47,7 @@ class AskRequest(BaseModel):
     task_hint: str            = ""   # 显式路由: qa / multi / review / writing / cite
     history:   list[HistoryMsg] = [] # 多轮对话历史
     use_web:   bool           = False # 联网检索
+    extra_context: str        = ""   # 文本参考资料（直接粘贴，不经过 RAG）
 
 
 @router.post("/ask")
@@ -57,11 +58,12 @@ def ask_question(req: AskRequest, session: Session = Depends(get_session),
     _check_and_count_query(current_user, session)
     answer, sources = ask(
         req.question,
-        doc_ids   = req.doc_ids or None,
-        section   = req.section or None,
-        task_hint = req.task_hint,
-        history   = [{"role": m.role, "content": m.content} for m in req.history],
-        use_web   = req.use_web,
+        doc_ids       = req.doc_ids or None,
+        section       = req.section or None,
+        task_hint     = req.task_hint,
+        history       = [{"role": m.role, "content": m.content} for m in req.history],
+        use_web       = req.use_web,
+        extra_context = req.extra_context,
     )
     return {"question": req.question, "answer": answer, "sources": sources}
 
@@ -83,7 +85,8 @@ def ask_stream(req: AskRequest, session: Session = Depends(get_session),
         try:
             gen = ask(req.question, stream=True,
                       doc_ids=doc_ids, section=section, task_hint=task_hint,
-                      history=history, use_web=use_web)
+                      history=history, use_web=use_web,
+                      extra_context=req.extra_context)
             for chunk in gen:
                 if isinstance(chunk, dict):
                     yield f"data: {json.dumps({'type':'sources','sources':chunk['sources']}, ensure_ascii=False)}\n\n"

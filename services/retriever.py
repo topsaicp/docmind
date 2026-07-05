@@ -278,15 +278,19 @@ def ask(
     task_hint: str = "",
     history:   list[dict] | None = None,   # [{role:"user",content:...}, ...]
     use_web:   bool = False,               # 是否附加联网检索结果
+    extra_context: str = "",               # 直接粘贴的文本参考资料
 ):
     # ── 任务类型解析（显式 task_hint 优先；否则关键词自动检测）──
+    has_pdf   = bool(doc_ids and len(doc_ids) >= 1)
+    has_text  = bool(extra_context and extra_context.strip())
+
     if task_hint in ("qa", "multi", "review", "writing", "cite"):
         task = task_hint
-        # task_hint 为 "review"/"writing" 时仍走对应的检索路径
-        is_review = task in ("review",) and doc_ids and len(doc_ids) >= 1
-        is_multi  = task == "multi" and doc_ids and len(doc_ids) >= 2
+        # review：有 PDF 或有粘贴文本均可触发
+        is_review = task == "review" and (has_pdf or has_text)
+        is_multi  = task == "multi" and has_pdf and len(doc_ids) >= 2
     else:
-        is_review = _is_review_request(question) and doc_ids and len(doc_ids) >= 1
+        is_review = _is_review_request(question) and (has_pdf or has_text)
         is_multi  = _is_multi_doc_overview(question, doc_ids) and not is_review
         task = "review" if is_review else ("multi" if is_multi else "qa")
 
@@ -295,20 +299,37 @@ def ask(
 
     # ── Prompt 构建 ───────────────────────────────────────────────────
     if is_review:
-        target_ids = doc_ids if doc_ids else []
-        per_doc    = retrieve_per_doc_for_review(question, target_ids, chunks_per_doc=12)
-        context, sources = build_multi_doc_context(per_doc)
-        doc_count  = len([v for v in per_doc.values() if v])
+        target_ids = doc_ids if has_pdf else []
 
-        header_parts = []
-        for idx, doc_id in enumerate(target_ids, 1):
-            headers = get_doc_header(doc_id, n=3)
-            if headers:
-                header_text = "\n".join(h["text"] for h in headers)
-                header_parts.append(f"[{idx}] 文件：{headers[0]['filename']}\n{header_text}")
-        headers_block = "\n\n---\n\n".join(header_parts)
+        # ── PDF 检索部分 ──
+        if has_pdf:
+            per_doc   = retrieve_per_doc_for_review(question, target_ids, chunks_per_doc=12)
+            context, sources = build_multi_doc_context(per_doc)
+            doc_count = len([v for v in per_doc.values() if v])
+            header_parts = []
+            for idx, doc_id in enumerate(target_ids, 1):
+                headers = get_doc_header(doc_id, n=3)
+                if headers:
+                    header_text = "\n".join(h["text"] for h in headers)
+                    header_parts.append(f"[{idx}] 文件：{headers[0]['filename']}\n{header_text}")
+            headers_block = "\n\n---\n\n".join(header_parts)
+        else:
+            context, sources, doc_count, headers_block = "", [], 0, ""
 
-        prompt = f"""你是一位资深学术写作专家。请基于以下 {doc_count} 篇文献的内容，撰写一篇规范的学术文献综述。
+        # ── 追加粘贴文本 ──
+        if has_text:
+            extra_block = f"\n\n══════════════════════════════════════\n【用户粘贴的参考资料】\n{extra_context.strip()}"
+            context = context + extra_block if context else extra_context.strip()
+
+        # ── Prompt 标题行根据来源动态生成 ──
+        if has_pdf and has_text:
+            source_desc = f"以下 {doc_count} 篇文献及附加参考资料"
+        elif has_pdf:
+            source_desc = f"以下 {doc_count} 篇文献的内容"
+        else:
+            source_desc = "以下参考资料"
+
+        prompt = f"""你是一位资深学术写作专家。请基于{source_desc}，撰写一篇规范的学术文献综述。
 
 【正文格式】严格按以下结构：
 一、引言（研究背景与意义，综述主题范围）
@@ -327,11 +348,7 @@ def ask(
 - 按 APA 第7版格式逐条列出，编号与正文引用编号对应
 
 ══════════════════════════════════════
-各篇论文首页信息（用于提取APA参考文献）：
-{headers_block}
-
-══════════════════════════════════════
-各篇论文正文内容（用于撰写综述）：
+{f"各篇论文首页信息（用于提取APA参考文献）：{chr(10)}{headers_block}{chr(10)}{chr(10)}══════════════════════════════════════{chr(10)}" if headers_block else ""}参考内容：
 {context}
 
 用户要求：{question}"""

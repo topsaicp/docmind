@@ -471,6 +471,24 @@ input,textarea{font-family:inherit}
   text-overflow:ellipsis;white-space:nowrap}
 .rev-badge{font-size:.6rem;padding:1px 5px;border-radius:3px;font-weight:600;flex-shrink:0}
 .rev-doc-empty{font-size:.78rem;color:var(--muted);text-align:center;padding:20px}
+.rev-text-section{border-top:1px solid var(--border);flex-shrink:0}
+.rev-text-toggle{width:100%;background:none;border:none;color:var(--muted);font-size:.72rem;
+  padding:8px 14px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;
+  text-align:left;transition:background .15s,color .15s}
+.rev-text-toggle:hover{background:rgba(255,255,255,.04);color:var(--fg)}
+.rev-text-toggle.active{color:var(--gold)}
+.rev-text-body{padding:0 10px 10px;display:none;flex-direction:column;gap:5px}
+.rev-text-body.open{display:flex}
+.rev-text-area{width:100%;min-height:90px;max-height:200px;background:rgba(255,255,255,.04);
+  border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:.76rem;
+  padding:7px 9px;resize:vertical;line-height:1.6;font-family:inherit;box-sizing:border-box}
+.rev-text-area:focus{outline:none;border-color:rgba(201,168,76,.4)}
+.rev-text-area::placeholder{color:var(--muted)}
+.rev-text-meta{display:flex;justify-content:space-between;align-items:center;
+  font-size:.66rem;color:var(--muted)}
+.rev-clear-text{background:none;border:none;color:var(--muted);font-size:.66rem;
+  cursor:pointer;padding:0}
+.rev-clear-text:hover{color:var(--fg)}
 .rev-controls{padding:12px 14px;border-top:1px solid var(--border);flex-shrink:0;
   display:flex;flex-direction:column;gap:8px;background:rgba(255,255,255,.01)}
 .rev-controls-label{font-size:.68rem;color:var(--muted);font-weight:500}
@@ -765,6 +783,23 @@ input,textarea{font-family:inherit}
           <div class="rev-doc-list" id="revDocList">
             <div class="rev-doc-empty">暂无文献，请先上传</div>
           </div>
+          <!-- 文本参考资料 -->
+          <div class="rev-text-section">
+            <button class="rev-text-toggle" id="revTextToggle" onclick="toggleRevText()">
+              <span>📄 文本参考资料（可选）</span>
+              <span id="revTextChevron">▸</span>
+            </button>
+            <div class="rev-text-body" id="revTextBody">
+              <textarea class="rev-text-area" id="revExtraText"
+                placeholder="粘贴文章正文、摘要或任何参考内容…支持中英文，不限格式，可与PDF文献同时使用"
+                oninput="updateRevTextMeta()"></textarea>
+              <div class="rev-text-meta">
+                <span id="revTextCount" style="color:var(--muted)">0 字</span>
+                <button class="rev-clear-text" onclick="clearRevText()">清空</button>
+              </div>
+            </div>
+          </div>
+
           <!-- Controls below doc list -->
           <div class="rev-controls">
             <div class="rev-controls-label">综述主题（可选，不填则自动归纳）</div>
@@ -2113,14 +2148,41 @@ function clearHistory(fromHistoryPage){
 // ══════════════════════════════════════════════════════════════
 // Review page
 // ══════════════════════════════════════════════════════════════
+function toggleRevText(){
+  const body    = document.getElementById('revTextBody');
+  const chevron = document.getElementById('revTextChevron');
+  const toggle  = document.getElementById('revTextToggle');
+  const open    = body.classList.toggle('open');
+  chevron.textContent = open ? '▾' : '▸';
+  toggle.classList.toggle('active', open);
+}
+
+function updateRevTextMeta(){
+  const t = document.getElementById('revExtraText').value;
+  const wc = t.trim() ? t.trim().split(/\s+/).length : 0;
+  const cc = t.length;
+  document.getElementById('revTextCount').textContent = cc > 0 ? `${cc} 字 / ${wc} 词` : '0 字';
+  // 有内容时高亮 toggle 按钮
+  document.getElementById('revTextToggle').classList.toggle('active', cc > 0);
+}
+
+function clearRevText(){
+  document.getElementById('revExtraText').value = '';
+  updateRevTextMeta();
+}
+
 async function startReview(){
   if(reviewStreaming){alert('正在生成中，请稍候');return;}
-  const docIds=reviewDocs.size>0?[...reviewDocs]:allDocs.filter(d=>d.status==='ready').map(d=>d.doc_id);
-  if(!docIds.length){alert('请先在左侧勾选文献');return;}
-  const topic=document.getElementById('reviewTopic').value.trim();
-  const q=topic
-    ?`请基于所选的 ${docIds.length} 篇文献，围绕「${topic}」撰写一篇详细的学术文献综述`
-    :`请基于以上 ${docIds.length} 篇文献，撰写一篇学术文献综述`;
+  const docIds     = reviewDocs.size>0 ? [...reviewDocs] : allDocs.filter(d=>d.status==='ready').map(d=>d.doc_id);
+  const extraText  = document.getElementById('revExtraText').value.trim();
+  if(!docIds.length && !extraText){ alert('请先在左侧勾选文献，或在「文本参考资料」中粘贴内容'); return; }
+  const topic = document.getElementById('reviewTopic').value.trim();
+  const sourceDesc = docIds.length && extraText ? `${docIds.length} 篇文献及附加参考资料`
+    : docIds.length ? `${docIds.length} 篇文献`
+    : '参考资料';
+  const q = topic
+    ? `请基于${sourceDesc}，围绕「${topic}」撰写一篇详细的学术文献综述`
+    : `请基于${sourceDesc}，撰写一篇学术文献综述`;
   const resultEl=document.getElementById('reviewResult');
   const statusEl=document.getElementById('reviewStatus');
   reviewStreaming=true;
@@ -2129,7 +2191,8 @@ async function startReview(){
   let fullText='';
   try{
     const res=await authFetch(`${API}/api/ask/stream`,{method:'POST',
-      headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q,doc_ids:docIds,section:'',task_hint:'review'})});
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({question:q,doc_ids:docIds,section:'',task_hint:'review',extra_context:extraText})});
     if(!res.ok) throw new Error(`HTTP ${res.status}`);
     const reader=res.body.getReader(),decoder=new TextDecoder();
     while(true){
