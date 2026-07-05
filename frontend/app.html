@@ -495,6 +495,63 @@ input,textarea{font-family:inherit}
   .review-layout{grid-template-columns:1fr}
   .rev-doc-panel{display:none}
 }
+
+/* ── PDF Text Layer ── */
+.pdf-page-wrap{position:relative;display:block;margin:0 auto}
+.pdf-text-layer{
+  position:absolute;inset:0;overflow:hidden;
+  opacity:1;line-height:1;
+  text-size-adjust:none;-webkit-text-size-adjust:none;
+  forced-color-adjust:none;
+  transform-origin:0 0;z-index:2;pointer-events:auto;
+}
+.pdf-text-layer span,.pdf-text-layer br{
+  color:transparent;position:absolute;white-space:pre;
+  cursor:text;transform-origin:0% 0%;
+}
+.pdf-text-layer span::selection{background:rgba(74,158,255,.35)}
+.pdf-text-layer ::-moz-selection{background:rgba(74,158,255,.35)}
+
+/* ── 文字选中弹窗 ── */
+#pdfTextPopup{
+  position:fixed;z-index:500;
+  background:#1a1a28;border:1px solid rgba(201,168,76,.4);
+  border-radius:9px;padding:10px 12px;box-shadow:0 8px 32px rgba(0,0,0,.6);
+  min-width:280px;max-width:380px;display:none;
+}
+#pdfTextPopup .pop-quote{
+  font-size:.72rem;color:var(--muted);
+  border-left:2px solid var(--gold);padding-left:7px;
+  margin-bottom:8px;max-height:52px;overflow:hidden;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;
+  word-break:break-all;line-height:1.5;
+}
+#pdfTextPopup .pop-row{display:flex;gap:6px;align-items:center}
+#pdfTextPopup .pop-input{
+  flex:1;background:rgba(255,255,255,.07);border:1px solid var(--border);
+  border-radius:6px;padding:6px 10px;font-size:.82rem;color:var(--fg);
+  outline:none;transition:border-color .2s;font-family:inherit;
+}
+#pdfTextPopup .pop-input:focus{border-color:rgba(201,168,76,.5)}
+#pdfTextPopup .pop-input::placeholder{color:var(--muted)}
+#pdfTextPopup .pop-send{
+  background:var(--gold);color:var(--bg);border:none;border-radius:6px;
+  padding:6px 13px;font-weight:700;font-size:.82rem;cursor:pointer;
+  white-space:nowrap;flex-shrink:0;
+}
+#pdfTextPopup .pop-send:hover{opacity:.88}
+#pdfTextPopup .pop-footer{display:flex;gap:6px;margin-top:7px;justify-content:flex-end}
+#pdfTextPopup .pop-copy{
+  background:transparent;border:1px solid var(--border);color:var(--muted);
+  border-radius:5px;padding:3px 10px;font-size:.72rem;cursor:pointer;
+  transition:all .15s;
+}
+#pdfTextPopup .pop-copy:hover{border-color:rgba(201,168,76,.4);color:var(--gold)}
+#pdfTextPopup .pop-close{
+  background:transparent;border:none;color:var(--muted);
+  font-size:.9rem;cursor:pointer;padding:2px 6px;line-height:1;
+}
+#pdfTextPopup .pop-close:hover{color:var(--fg)}
 </style>
 </head>
 <body>
@@ -934,6 +991,24 @@ input,textarea{font-family:inherit}
   </div><!-- /content-area -->
 
 </div><!-- /app-body -->
+
+<!-- ── PDF 文字选中弹窗 ── -->
+<div id="pdfTextPopup">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+    <span style="font-size:.72rem;color:var(--gold);font-weight:600">📝 选中文字</span>
+    <button class="pop-close" onclick="hidePdfTextPopup()">✕</button>
+  </div>
+  <div class="pop-quote" id="pdfPopQuote"></div>
+  <div class="pop-row">
+    <input class="pop-input" id="pdfPopInput" placeholder="基于这段文字提问… (Enter 发送)"
+      onkeydown="pdfPopKey(event)">
+    <button class="pop-send" onclick="sendPdfTextQuestion()">发送</button>
+  </div>
+  <div class="pop-footer">
+    <button class="pop-copy" onclick="copyPdfSelectedText()">📋 复制文字</button>
+    <button class="pop-copy" onclick="insertPdfTextToInput()">↓ 填入输入框</button>
+  </div>
+</div>
 
 <!-- ── Fixed input bar (Q&A only) ── -->
 <div class="qa-bar" id="qaBar">
@@ -1454,19 +1529,49 @@ async function _renderPdfPage(pageNum){
   const wrap   = document.getElementById('pdfchatPdfWrap');
   const pages  = document.getElementById('pdfchatPages');
   const page   = await _pdfJsDoc.getPage(pageNum);
-  const vw     = wrap.clientWidth - 24;  // 减去 padding
+  const vw     = wrap.clientWidth - 24;
   const baseVP = page.getViewport({scale: 1});
   const scale  = Math.min(vw / baseVP.width, 2.0);
   const vp     = page.getViewport({scale});
+
+  // 每页用一个 wrapper div 包裹 canvas + text layer
+  const pageWrap = document.createElement('div');
+  pageWrap.className = 'pdf-page-wrap';
+  pageWrap.style.cssText = `width:${vp.width}px;height:${vp.height}px;`;
+  pageWrap.dataset.page = pageNum;
 
   const canvas = document.createElement('canvas');
   canvas.width  = vp.width;
   canvas.height = vp.height;
   canvas.style.width  = vp.width + 'px';
+  canvas.style.height = vp.height + 'px';
   canvas.dataset.page = pageNum;
-  pages.appendChild(canvas);
+  pageWrap.appendChild(canvas);
 
+  // Text layer（透明文字层，支持鼠标选中）
+  const textLayerDiv = document.createElement('div');
+  textLayerDiv.className = 'pdf-text-layer';
+  pageWrap.appendChild(textLayerDiv);
+
+  pages.appendChild(pageWrap);
+
+  // 渲染 canvas
   await page.render({canvasContext: canvas.getContext('2d'), viewport: vp}).promise;
+
+  // 渲染文字层（PDF.js 3.x API）
+  try {
+    const textContent = await page.getTextContent();
+    const tl = pdfjsLib.renderTextLayer({
+      textContentSource: textContent,
+      container: textLayerDiv,
+      viewport: vp,
+      textDivs: [],
+    });
+    if(tl && tl.promise) await tl.promise;
+  } catch(e) {
+    // text layer 失败不影响 PDF 显示
+    console.warn('text layer render failed:', e);
+  }
 }
 
 // ── 框选截图 ───────────────────────────────────────────────────────────
@@ -1539,7 +1644,7 @@ function _captureRegion(overlayRect, selL, selT, selW, selH){
   const wrapRect = wrap.getBoundingClientRect();
   let captured  = false;
 
-  document.querySelectorAll('#pdfchatPages canvas').forEach(pgCanvas => {
+  document.querySelectorAll('#pdfchatPages .pdf-page-wrap canvas').forEach(pgCanvas => {
     const pgRect  = pgCanvas.getBoundingClientRect();
     const pgL = pgRect.left - wrapRect.left + scrollLeft;
     const pgT = pgRect.top  - wrapRect.top  + scrollTop;
@@ -1702,6 +1807,98 @@ function pdfchatAskSection(sec){
 function pdfchatKey(e){ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendPdfChat(); } }
 function pdfchatResize(ta){ ta.style.height='auto'; ta.style.height=Math.min(ta.scrollHeight,120)+'px'; }
 function scrollPdfchat(){ const el=document.getElementById('pdfchatHistory'); if(el) requestAnimationFrame(()=>{ el.scrollTop=el.scrollHeight; }); }
+
+// ── PDF 文字选中 + 弹窗提问 ─────────────────────────────────────────────
+let _pdfSelectedText = '';
+
+// 监听 PDF 阅读区的鼠标抬起，检测是否有文字被选中
+document.addEventListener('mouseup', e => {
+  // 点击弹窗本身时不触发
+  if(e.target.closest('#pdfTextPopup')) return;
+  // 只在 PDF 阅读区触发
+  if(!e.target.closest('#pdfchatPdfWrap')) {
+    hidePdfTextPopup();
+    return;
+  }
+  // 延迟一帧，等浏览器完成 selection 更新
+  requestAnimationFrame(() => {
+    const sel = window.getSelection();
+    const txt = sel ? sel.toString().trim() : '';
+    if(txt.length < 2) { hidePdfTextPopup(); return; }
+    _pdfSelectedText = txt;
+    // 定位弹窗到鼠标位置附近
+    showPdfTextPopup(e.clientX, e.clientY, txt);
+  });
+});
+
+// 按 ESC 关闭弹窗
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape') hidePdfTextPopup();
+});
+
+function showPdfTextPopup(cx, cy, text) {
+  const popup = document.getElementById('pdfTextPopup');
+  const quote = document.getElementById('pdfPopQuote');
+  const input = document.getElementById('pdfPopInput');
+  quote.textContent = text.length > 120 ? text.slice(0, 120) + '…' : text;
+  input.value = '';
+  popup.style.display = 'block';
+  // 定位：优先在鼠标上方，防止超出视口
+  const pw = 390, ph = 150;
+  let left = cx - pw / 2;
+  let top  = cy - ph - 14;
+  left = Math.max(8, Math.min(left, window.innerWidth  - pw - 8));
+  top  = Math.max(8, Math.min(top,  window.innerHeight - ph - 8));
+  if(top < 60) top = cy + 14; // 上方不够则显示在下方
+  popup.style.left = left + 'px';
+  popup.style.top  = top  + 'px';
+  setTimeout(() => input.focus(), 60);
+}
+
+function hidePdfTextPopup() {
+  document.getElementById('pdfTextPopup').style.display = 'none';
+  _pdfSelectedText = '';
+}
+
+function pdfPopKey(e) {
+  if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendPdfTextQuestion(); }
+}
+
+function sendPdfTextQuestion() {
+  const q = document.getElementById('pdfPopInput').value.trim();
+  const selectedText = _pdfSelectedText;
+  hidePdfTextPopup();
+  window.getSelection()?.removeAllRanges();
+  if(!selectedText) return;
+  // 构建问题：引用选中内容 + 用户追问
+  const fullQ = q
+    ? `关于以下内容：\n「${selectedText}」\n\n${q}`
+    : `请解释以下内容：\n「${selectedText}」`;
+  sendPdfChat(fullQ);
+}
+
+function copyPdfSelectedText() {
+  if(!_pdfSelectedText) return;
+  navigator.clipboard.writeText(_pdfSelectedText).then(() => {
+    const btn = document.querySelector('#pdfTextPopup .pop-copy');
+    const orig = btn.textContent;
+    btn.textContent = '✓ 已复制';
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  });
+}
+
+function insertPdfTextToInput() {
+  const input = document.getElementById('pdfchatInput');
+  const txt = _pdfSelectedText;
+  hidePdfTextPopup();
+  window.getSelection()?.removeAllRanges();
+  if(!txt) return;
+  input.value = `「${txt}」\n`;
+  input.focus();
+  pdfchatResize(input);
+  // 光标移到末尾
+  input.selectionStart = input.selectionEnd = input.value.length;
+}
 
 function pdfchatClear(){
   if(!confirm('确认清空此文档的对话记录？')) return;
