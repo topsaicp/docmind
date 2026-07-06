@@ -187,6 +187,7 @@ input,textarea{font-family:inherit}
 .thinking span:nth-child(2){animation-delay:.2s}
 .thinking span:nth-child(3){animation-delay:.4s}
 @keyframes bounce{0%,80%,100%{transform:scale(.7);opacity:.4}40%{transform:scale(1);opacity:1}}
+@keyframes fadeIn{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 .msg-actions{display:flex;gap:5px;margin-top:4px}
 .msg-act-btn{background:transparent;border:1px solid var(--border);color:var(--muted);
   font-size:.67rem;padding:2px 7px;border-radius:4px;cursor:pointer;transition:all .15s}
@@ -588,25 +589,45 @@ input,textarea{font-family:inherit}
 <!-- ── Auth modal ── -->
 <div id="auth-modal">
   <div class="auth-box">
-    <div style="text-align:center;margin-bottom:20px">
-      <div style="font-size:1.4rem;margin-bottom:6px">📚</div>
-      <div style="font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700">请先登录</div>
-      <div style="font-size:.73rem;color:var(--muted);margin-top:4px">登录后使用 DocMind 工作台</div>
+    <!-- 登录/注册表单 -->
+    <div id="auth-form-panel">
+      <div style="text-align:center;margin-bottom:20px">
+        <div style="font-size:1.4rem;margin-bottom:6px">📚</div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700">请先登录</div>
+        <div style="font-size:.73rem;color:var(--muted);margin-top:4px">登录后使用 DocMind 工作台</div>
+      </div>
+      <div style="display:flex;border-bottom:1px solid var(--border);margin-bottom:16px">
+        <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">登录</button>
+        <button class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">注册</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:9px">
+        <input class="auth-input" type="email" id="auth-email" placeholder="邮箱地址">
+        <input class="auth-input" type="password" id="auth-password" placeholder="密码（至少6位）">
+        <div id="auth-error" style="display:none;color:#f87171;font-size:.73rem;padding:6px 10px;background:rgba(248,113,113,.08);border-radius:5px"></div>
+        <button class="btn-submit" id="auth-submit" onclick="submitAuth()">登录</button>
+      </div>
+      <p style="text-align:center;font-size:.73rem;color:var(--muted);margin-top:11px">
+        <span id="auth-switch-hint">没有账号？</span>
+        <a id="auth-switch-link" style="color:var(--gold);cursor:pointer" onclick="switchAuthTab('register')">免费注册</a>
+      </p>
     </div>
-    <div style="display:flex;border-bottom:1px solid var(--border);margin-bottom:16px">
-      <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">登录</button>
-      <button class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">注册</button>
+    <!-- 注册后：等待邮箱验证面板 -->
+    <div id="auth-verify-panel" style="display:none;text-align:center;padding:10px 0">
+      <div style="font-size:2rem;margin-bottom:12px">📧</div>
+      <div style="font-size:1rem;font-weight:600;color:var(--fg);margin-bottom:8px">请验证您的邮箱</div>
+      <div style="font-size:.78rem;color:var(--muted);line-height:1.7;margin-bottom:20px">
+        验证邮件已发送至<br>
+        <strong id="auth-verify-email" style="color:var(--gold)"></strong><br>
+        请点击邮件中的链接完成验证，链接24小时有效。
+      </div>
+      <div style="font-size:.72rem;color:var(--muted);margin-bottom:14px">没收到？请检查垃圾邮件文件夹</div>
+      <button class="btn-submit" onclick="resendVerifyFromModal()" style="background:transparent;border:1px solid rgba(201,168,76,.4);color:var(--gold)">
+        重新发送验证邮件
+      </button>
+      <p style="font-size:.72rem;color:var(--muted);margin-top:14px">
+        已验证？<a style="color:var(--gold);cursor:pointer" onclick="switchAuthPanel('form')">返回登录</a>
+      </p>
     </div>
-    <div style="display:flex;flex-direction:column;gap:9px">
-      <input class="auth-input" type="email" id="auth-email" placeholder="邮箱地址">
-      <input class="auth-input" type="password" id="auth-password" placeholder="密码（至少6位）">
-      <div id="auth-error" style="display:none;color:#f87171;font-size:.73rem;padding:6px 10px;background:rgba(248,113,113,.08);border-radius:5px"></div>
-      <button class="btn-submit" id="auth-submit" onclick="submitAuth()">登录</button>
-    </div>
-    <p style="text-align:center;font-size:.73rem;color:var(--muted);margin-top:11px">
-      <span id="auth-switch-hint">没有账号？</span>
-      <a id="auth-switch-link" style="color:var(--gold);cursor:pointer" onclick="switchAuthTab('register')">免费注册</a>
-    </p>
   </div>
 </div>
 
@@ -644,6 +665,23 @@ input,textarea{font-family:inherit}
       </div>
     </div>
   </div>
+</div>
+
+<!-- ── 邮箱验证横幅 ── -->
+<div id="verify-banner" style="display:none;background:linear-gradient(90deg,rgba(201,168,76,.12),rgba(201,168,76,.06));
+  border-bottom:1px solid rgba(201,168,76,.25);padding:9px 20px;
+  display:none;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap">
+  <span style="font-size:.8rem;color:#e0c97a">📧 您的邮箱尚未验证，部分功能暂时不可用</span>
+  <button onclick="resendVerifyBanner()"
+    style="font-size:.72rem;padding:3px 12px;border-radius:5px;border:1px solid rgba(201,168,76,.4);
+           background:transparent;color:var(--gold);cursor:pointer">
+    重新发送验证邮件
+  </button>
+  <button onclick="location.reload()"
+    style="font-size:.72rem;padding:3px 10px;border-radius:5px;border:1px solid rgba(255,255,255,.1);
+           background:transparent;color:var(--muted);cursor:pointer">
+    已验证，刷新
+  </button>
 </div>
 
 <!-- ── App body ── -->
@@ -1111,6 +1149,11 @@ function switchAuthTab(mode){
   document.getElementById('auth-switch-link').onclick=()=>switchAuthTab(mode==='login'?'register':'login');
   document.getElementById('auth-error').style.display='none';
 }
+function switchAuthPanel(panel){
+  document.getElementById('auth-form-panel').style.display   = panel==='form'   ? '' : 'none';
+  document.getElementById('auth-verify-panel').style.display = panel==='verify' ? '' : 'none';
+}
+
 async function submitAuth(){
   const email=document.getElementById('auth-email').value.trim();
   const pwd=document.getElementById('auth-password').value;
@@ -1123,13 +1166,53 @@ async function submitAuth(){
     const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pwd})});
     const d=await res.json();
     if(!res.ok){ showAuthErr(d.detail||'操作失败'); return; }
-    localStorage.setItem('auth_token',d.token);
-    currentUser={email:d.email,plan:d.plan,pdf_count:d.pdf_count||0,query_count_today:d.query_count_today||0};
+
+    if(authMode==='register'){
+      // 注册成功：不登录，显示"请验证邮箱"面板
+      document.getElementById('auth-verify-email').textContent = d.email || email;
+      switchAuthPanel('verify');
+      return;
+    }
+
+    // 登录成功
+    localStorage.setItem('auth_token', d.token);
+    currentUser = {
+      email: d.email, plan: d.plan,
+      pdf_count: d.pdf_count||0, query_count_today: d.query_count_today||0,
+      email_verified: d.email_verified !== false,
+    };
     document.getElementById('auth-modal').classList.remove('show');
     onAuthSuccess();
   }catch(e){ showAuthErr('网络错误：'+e.message); }
   finally{ btn.disabled=false; btn.textContent=authMode==='login'?'登录':'注册'; }
 }
+
+async function resendVerifyFromModal(){
+  const email = document.getElementById('auth-verify-email').textContent.trim()
+    || document.getElementById('auth-email').value.trim();
+  if(!email){ alert('请先输入邮箱'); return; }
+  try{
+    const res = await fetch(`${API}/api/auth/resend-verify`,{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({email})
+    });
+    const d = await res.json();
+    alert(res.ok ? '验证邮件已重新发送，请检查收件箱（含垃圾邮件）' : (d.detail||'发送失败'));
+  }catch(e){ alert('网络错误：'+e.message); }
+}
+
+async function resendVerifyBanner(){
+  if(!currentUser) return;
+  try{
+    const res = await authFetch(`${API}/api/auth/resend-verify`,{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({email: currentUser.email})
+    });
+    const d = await res.json();
+    alert(res.ok ? '验证邮件已发送，请检查收件箱（含垃圾邮件）' : (d.detail||'发送失败'));
+  }catch(e){ alert('网络错误：'+e.message); }
+}
+
 function showAuthErr(msg){ const e=document.getElementById('auth-error'); e.textContent=msg; e.style.display='block'; }
 function logout(){ localStorage.removeItem('auth_token'); currentUser=null; window.location.href='/'; }
 document.getElementById('auth-password').addEventListener('keydown',e=>{ if(e.key==='Enter') submitAuth(); });
@@ -1143,13 +1226,51 @@ async function checkAuth(){
   try{
     const res=await fetch(`${API}/api/auth/me`,{headers:{'Authorization':`Bearer ${tok}`}});
     if(!res.ok){ localStorage.removeItem('auth_token'); openAuth(); return; }
-    currentUser=await res.json();
+    const d = await res.json();
+    currentUser = {...d, email_verified: d.email_verified !== false};
     onAuthSuccess();
   }catch{ openAuth(); }
 }
 function onAuthSuccess(){
   updateTopbar(); loadDocuments(); renderHistory(); updatePlanBadges();
+  // 显示/隐藏验证横幅
+  const banner = document.getElementById('verify-banner');
+  if(banner) banner.style.display = currentUser.email_verified ? 'none' : 'flex';
+  // 处理 URL 验证参数
+  _handleVerifyParam();
 }
+function _handleVerifyParam(){
+  const params = new URLSearchParams(window.location.search);
+  const v = params.get('verify');
+  if(!v) return;
+  // 清除 URL 参数，避免刷新重复提示
+  history.replaceState(null,'', window.location.pathname);
+  if(v==='ok'){
+    showToast('✅ 邮箱验证成功！欢迎使用 DocMind', 'success');
+    if(currentUser) currentUser.email_verified = true;
+    const banner = document.getElementById('verify-banner');
+    if(banner) banner.style.display = 'none';
+  } else if(v==='expired'){
+    showToast('⏰ 验证链接已过期，请重新发送', 'warn');
+  } else if(v==='invalid'){
+    showToast('❌ 无效的验证链接', 'error');
+  } else if(v==='already'){
+    showToast('✅ 邮箱已完成验证', 'success');
+  }
+}
+
+function showToast(msg, type='info'){
+  const colors = {success:'#4ade80', warn:'#fbbf24', error:'#f87171', info:'#94a3b8'};
+  const t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = `position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    background:#1e1e2e;border:1px solid ${colors[type]||colors.info};color:${colors[type]||colors.info};
+    padding:10px 22px;border-radius:8px;font-size:.83rem;z-index:9999;
+    box-shadow:0 4px 20px rgba(0,0,0,.4);animation:fadeIn .25s ease`;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 4000);
+}
+
 function updateTopbar(){
   if(!currentUser) return;
   const pro=currentUser.plan==='pro'?`<span class="tb-plan">PRO</span>`:'';
@@ -2272,6 +2393,18 @@ function renderAccount(){
     <div class="account-card">
       <div class="account-card-title">账号信息</div>
       <div class="account-row"><span class="account-label">邮箱</span><span class="account-value">${esc(currentUser.email)}</span></div>
+      <div class="account-row">
+        <span class="account-label">邮箱验证</span>
+        ${currentUser.email_verified
+          ? `<span class="account-value" style="color:#4ade80">✓ 已验证</span>`
+          : `<span style="display:flex;align-items:center;gap:8px">
+               <span style="color:#fbbf24;font-size:.78rem">⚠ 未验证</span>
+               <button onclick="resendVerifyBanner()"
+                 style="font-size:.7rem;padding:2px 10px;border-radius:4px;border:1px solid rgba(201,168,76,.35);
+                        background:transparent;color:var(--gold);cursor:pointer">重新发送</button>
+             </span>`
+        }
+      </div>
       <div class="account-row"><span class="account-label">当前套餐</span><span class="account-value" style="color:var(--gold)">${isPro?'✦ 专业版':'免费版'}</span></div>
     </div>
     <div class="account-card">

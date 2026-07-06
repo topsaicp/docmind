@@ -21,6 +21,11 @@ from routers.auth import get_current_user
 from datetime import datetime
 
 
+def require_verified(user: User):
+    if not user.email_verified:
+        raise HTTPException(403, "请先验证邮箱后再使用此功能")
+
+
 def effective_plan(user: User) -> str:
     """计算用户实际套餐（考虑到期 + admin 等同 pro）。"""
     if user.is_admin:
@@ -63,6 +68,7 @@ class AskRequest(BaseModel):
 @router.post("/ask")
 def ask_question(req: AskRequest, session: Session = Depends(get_session),
                  current_user: User = Depends(get_current_user)):
+    require_verified(current_user)
     if not req.question.strip():
         return {"error": "问题不能为空"}
     _check_and_count_query(current_user, session)
@@ -82,6 +88,7 @@ def ask_question(req: AskRequest, session: Session = Depends(get_session),
 @router.post("/ask/stream")
 def ask_stream(req: AskRequest, session: Session = Depends(get_session),
                current_user: User = Depends(get_current_user)):
+    require_verified(current_user)
     if not req.question.strip():
         return {"error": "问题不能为空"}
     _check_and_count_query(current_user, session)

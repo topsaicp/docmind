@@ -20,6 +20,11 @@ from routers.auth import get_current_user
 router = APIRouter(prefix="/api", tags=["documents"])
 
 
+def require_verified(user: User):
+    if not user.email_verified:
+        raise HTTPException(403, "请先验证邮箱后再使用此功能。验证邮件已发送至您的注册邮箱。")
+
+
 def _process_in_background(doc_id: str, pdf_path: str, filename: str):
     """在后台线程中处理PDF并入库"""
     from db.database import Session as DBSession
@@ -58,11 +63,7 @@ async def upload_pdf(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-    # 免费用户 PDF 数量限制（测试期间暂停）
-    # if current_user.plan == "free":
-    #     db_user = session.query(User).filter_by(id=current_user.id).first()
-    #     if db_user.pdf_count >= FREE_PDF_LIMIT:
-    #         raise HTTPException(403, f"免费用户最多上传 {FREE_PDF_LIMIT} 篇 PDF，请升级专业版")
+    require_verified(current_user)
 
     # 格式校验
     suffix = Path(file.filename).suffix.lower()

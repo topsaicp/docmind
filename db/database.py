@@ -31,6 +31,9 @@ class User(Base):
     query_count_today = Column(Integer, default=0)
     query_date        = Column(String, nullable=True)       # "2026-06-23"
     is_admin          = Column(Boolean, default=False)
+    email_verified    = Column(Boolean, default=False)
+    email_verify_token      = Column(String, nullable=True)
+    email_verify_expires_at = Column(DateTime, nullable=True)
     created_at        = Column(DateTime, default=datetime.utcnow)
 
 

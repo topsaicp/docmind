@@ -70,6 +70,12 @@ SECRET_KEY   = os.getenv("SECRET_KEY", "docmind-dev-secret-change-in-prod")
 ADMIN_SECRET = os.getenv("ADMIN_SECRET", "admin123")
 JWT_EXPIRE_DAYS = 30
 
+# 邮件服务（Resend）
+RESEND_API_KEY      = os.getenv("RESEND_API_KEY", "")
+EMAIL_FROM          = os.getenv("EMAIL_FROM", "DocMind <noreply@topsai.app>")
+APP_URL             = os.getenv("APP_URL", "http://localhost:8000")   # 生产环境必须设置
+EMAIL_VERIFY_HOURS  = 24   # 验证链接有效期（小时）
+
 # ── 套餐限额配置表 ────────────────────────────────────────────────────
 PLAN_LIMITS: dict[str, dict] = {
     "free": {
