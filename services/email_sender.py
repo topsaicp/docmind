@@ -1,29 +1,62 @@
 """
-邮件发送服务（基于 Resend）
-未配置 RESEND_API_KEY 时仅打印链接到日志，不影响本地开发。
+邮件发送服务（SMTP，优先使用 163 等 SMTP 服务）
+环境变量：
+  SMTP_USER  发件邮箱，如 njuechx@163.com
+  SMTP_PASS  163 授权码（不是登录密码）
+未配置时仅打印链接到日志，不影响本地开发。
 """
-from config import RESEND_API_KEY, EMAIL_FROM, APP_URL
+import os, smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text      import MIMEText
+from config import APP_URL
 
-_BASE = APP_URL.rstrip("/")   # 去掉末尾斜杠，防止双斜杠 URL
+_BASE      = APP_URL.rstrip("/")
+_SMTP_USER = os.getenv("SMTP_USER", "")
+_SMTP_PASS = os.getenv("SMTP_PASS", "")
+
+# 根据发件邮箱后缀自动选 SMTP 服务器
+_SMTP_SERVERS = {
+    "163.com":  ("smtp.163.com",  465),
+    "126.com":  ("smtp.126.com",  465),
+    "qq.com":   ("smtp.qq.com",   465),
+    "gmail.com":("smtp.gmail.com", 587),
+    "yeah.net": ("smtp.yeah.net", 465),
+}
+_DEFAULT_SMTP = ("smtp.163.com", 465)
+
+
+def _get_smtp_server() -> tuple[str, int]:
+    if not _SMTP_USER:
+        return _DEFAULT_SMTP
+    domain = _SMTP_USER.split("@")[-1].lower()
+    return _SMTP_SERVERS.get(domain, _DEFAULT_SMTP)
 
 
 def send_verify_email(to_email: str, token: str) -> bool:
     verify_url = f"{_BASE}/api/auth/verify-email?token={token}"
 
-    if not RESEND_API_KEY:
-        print(f"[email-dev] RESEND_API_KEY 未配置，验证链接：{verify_url}")
+    if not _SMTP_USER or not _SMTP_PASS:
+        print(f"[email-dev] SMTP 未配置，验证链接：{verify_url}")
         return True
 
+    host, port = _get_smtp_server()
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = "验证您的 DocMind 邮箱"
+    msg["From"]    = f"DocMind <{_SMTP_USER}>"
+    msg["To"]      = to_email
+    msg.attach(MIMEText(_verify_html(to_email, verify_url), "html", "utf-8"))
+
     try:
-        import resend
-        resend.api_key = RESEND_API_KEY
-        result = resend.Emails.send({
-            "from":    EMAIL_FROM,
-            "to":      [to_email],
-            "subject": "验证您的 DocMind 邮箱",
-            "html":    _verify_html(to_email, verify_url),
-        })
-        print(f"[email] 发送成功: {result}")
+        if port == 465:
+            with smtplib.SMTP_SSL(host, port, timeout=10) as s:
+                s.login(_SMTP_USER, _SMTP_PASS)
+                s.sendmail(_SMTP_USER, [to_email], msg.as_string())
+        else:
+            with smtplib.SMTP(host, port, timeout=10) as s:
+                s.starttls()
+                s.login(_SMTP_USER, _SMTP_PASS)
+                s.sendmail(_SMTP_USER, [to_email], msg.as_string())
+        print(f"[email] 发送成功 → {to_email}")
         return True
     except Exception as e:
         print(f"[email] 发送失败 ({type(e).__name__}): {e}")
