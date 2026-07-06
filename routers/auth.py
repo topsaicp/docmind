@@ -154,18 +154,19 @@ def login(req: AuthReq, session: Session = Depends(get_session)):
 @router.get("/verify-email")
 def verify_email(token: str, session: Session = Depends(get_session)):
     user = session.query(User).filter_by(email_verify_token=token).first()
+    _base = APP_URL.rstrip("/")
     if not user:
-        return RedirectResponse(url=f"{APP_URL}/app.html?verify=invalid")
+        return RedirectResponse(url=f"{_base}/app?verify=invalid")
     if user.email_verified:
-        return RedirectResponse(url=f"{APP_URL}/app.html?verify=already")
+        return RedirectResponse(url=f"{_base}/app?verify=already")
     if user.email_verify_expires_at and user.email_verify_expires_at < datetime.utcnow():
-        return RedirectResponse(url=f"{APP_URL}/app.html?verify=expired&email={user.email}")
+        return RedirectResponse(url=f"{_base}/app?verify=expired&email={user.email}")
 
     user.email_verified          = True
     user.email_verify_token      = None
     user.email_verify_expires_at = None
     session.commit()
-    return RedirectResponse(url=f"{APP_URL}/app.html?verify=ok")
+    return RedirectResponse(url=f"{_base}/app?verify=ok")
 
 
 @router.post("/resend-verify")
