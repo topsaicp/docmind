@@ -1150,8 +1150,16 @@ function switchAuthTab(mode){
   document.getElementById('auth-error').style.display='none';
 }
 function switchAuthPanel(panel){
-  document.getElementById('auth-form-panel').style.display   = panel==='form'   ? '' : 'none';
-  document.getElementById('auth-verify-panel').style.display = panel==='verify' ? '' : 'none';
+  // 用 'block'/'none' 确保不受 CSS 层叠干扰
+  document.getElementById('auth-form-panel').style.display   = panel==='form'   ? 'block' : 'none';
+  document.getElementById('auth-verify-panel').style.display = panel==='verify' ? 'block' : 'none';
+}
+
+function _showVerifyPanel(email){
+  document.getElementById('auth-verify-email').textContent = email;
+  switchAuthPanel('verify');
+  // 确保 modal 保持打开
+  document.getElementById('auth-modal').classList.add('show');
 }
 
 async function submitAuth(){
@@ -1167,19 +1175,25 @@ async function submitAuth(){
     const d=await res.json();
     if(!res.ok){ showAuthErr(d.detail||'操作失败'); return; }
 
+    // 注册成功 → 强制显示验证面板，不进入应用
     if(authMode==='register'){
-      // 注册成功：不登录，显示"请验证邮箱"面板
-      document.getElementById('auth-verify-email').textContent = d.email || email;
-      switchAuthPanel('verify');
+      _showVerifyPanel(d.email || email);
       return;
     }
 
-    // 登录成功
+    // 登录成功但邮箱未验证 → 同样显示验证面板，不进入应用
+    if(d.email_verified === false){
+      localStorage.setItem('auth_token', d.token); // 先存 token，resend 接口需要
+      _showVerifyPanel(d.email || email);
+      return;
+    }
+
+    // 登录成功且已验证 → 进入应用
     localStorage.setItem('auth_token', d.token);
     currentUser = {
       email: d.email, plan: d.plan,
       pdf_count: d.pdf_count||0, query_count_today: d.query_count_today||0,
-      email_verified: d.email_verified !== false,
+      email_verified: true,
     };
     document.getElementById('auth-modal').classList.remove('show');
     onAuthSuccess();
@@ -1227,7 +1241,13 @@ async function checkAuth(){
     const res=await fetch(`${API}/api/auth/me`,{headers:{'Authorization':`Bearer ${tok}`}});
     if(!res.ok){ localStorage.removeItem('auth_token'); openAuth(); return; }
     const d = await res.json();
-    currentUser = {...d, email_verified: d.email_verified !== false};
+    // 邮箱未验证：打开 modal 显示验证面板，不进入应用
+    if(d.email_verified === false){
+      document.getElementById('auth-modal').classList.add('show');
+      _showVerifyPanel(d.email);
+      return;
+    }
+    currentUser = {...d, email_verified: true};
     onAuthSuccess();
   }catch{ openAuth(); }
 }
