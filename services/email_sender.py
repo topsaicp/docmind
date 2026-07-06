@@ -4,26 +4,29 @@
 """
 from config import RESEND_API_KEY, EMAIL_FROM, APP_URL
 
+_BASE = APP_URL.rstrip("/")   # 去掉末尾斜杠，防止双斜杠 URL
+
 
 def send_verify_email(to_email: str, token: str) -> bool:
-    verify_url = f"{APP_URL}/api/auth/verify-email?token={token}"
+    verify_url = f"{_BASE}/api/auth/verify-email?token={token}"
 
     if not RESEND_API_KEY:
-        print(f"[email-dev] 验证链接（仅开发用，未配置 RESEND_API_KEY）：{verify_url}")
+        print(f"[email-dev] RESEND_API_KEY 未配置，验证链接：{verify_url}")
         return True
 
     try:
         import resend
         resend.api_key = RESEND_API_KEY
-        resend.Emails.send({
+        result = resend.Emails.send({
             "from":    EMAIL_FROM,
             "to":      [to_email],
             "subject": "验证您的 DocMind 邮箱",
             "html":    _verify_html(to_email, verify_url),
         })
+        print(f"[email] 发送成功: {result}")
         return True
     except Exception as e:
-        print(f"[email] 发送失败: {e}")
+        print(f"[email] 发送失败 ({type(e).__name__}): {e}")
         return False
 
 
