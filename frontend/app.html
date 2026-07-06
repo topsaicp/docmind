@@ -1166,24 +1166,26 @@ async function submitAuth(){
   const email=document.getElementById('auth-email').value.trim();
   const pwd=document.getElementById('auth-password').value;
   const btn=document.getElementById('auth-submit');
+  // 立即捕获模式到局部变量：fetch 异步期间用户点 tab 会改变全局 authMode
+  const mode = authMode;
   if(!email.includes('@')){ showAuthErr('请输入有效邮箱'); return; }
   if(pwd.length<6){ showAuthErr('密码至少6位'); return; }
   btn.disabled=true; btn.textContent='请稍候…';
   try{
-    const url=authMode==='login'?`${API}/api/auth/login`:`${API}/api/auth/register`;
+    const url=mode==='login'?`${API}/api/auth/login`:`${API}/api/auth/register`;
     const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pwd})});
     const d=await res.json();
     if(!res.ok){ showAuthErr(d.detail||'操作失败'); return; }
 
-    // 注册成功 → 强制显示验证面板，不进入应用
-    if(authMode==='register'){
+    // 注册成功 → 显示验证面板，不进入应用
+    if(mode==='register'){
       _showVerifyPanel(d.email || email);
       return;
     }
 
-    // 登录成功但邮箱未验证 → 同样显示验证面板，不进入应用
+    // 登录成功但邮箱未验证 → 显示验证面板，不进入应用
     if(d.email_verified === false){
-      localStorage.setItem('auth_token', d.token); // 先存 token，resend 接口需要
+      localStorage.setItem('auth_token', d.token);
       _showVerifyPanel(d.email || email);
       return;
     }
@@ -1198,7 +1200,7 @@ async function submitAuth(){
     document.getElementById('auth-modal').classList.remove('show');
     onAuthSuccess();
   }catch(e){ showAuthErr('网络错误：'+e.message); }
-  finally{ btn.disabled=false; btn.textContent=authMode==='login'?'登录':'注册'; }
+  finally{ btn.disabled=false; btn.textContent=mode==='login'?'登录':'注册'; }
 }
 
 async function resendVerifyFromModal(){
