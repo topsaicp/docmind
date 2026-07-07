@@ -57,11 +57,13 @@ def reduce_text(
     current_user: User = Depends(get_current_user),
 ):
     require_verified(current_user)
+    plan = effective_plan(current_user)
+    if plan not in ("pro", "enterprise"):
+        raise HTTPException(403, "降率工具为专业版专属功能，请升级后使用")
     if not req.text.strip():
         raise HTTPException(400, "文本不能为空")
     if req.mode not in ("ai", "dup", "both"):
         raise HTTPException(400, "无效的降率模式")
-    plan = effective_plan(current_user)
     _check_word_limit(req.text, plan)
     return StreamingResponse(_gen(req.text, req.mode), media_type="text/event-stream")
 
@@ -73,6 +75,9 @@ async def reduce_upload(
     current_user: User = Depends(get_current_user),
 ):
     require_verified(current_user)
+    plan = effective_plan(current_user)
+    if plan not in ("pro", "enterprise"):
+        raise HTTPException(403, "降率工具为专业版专属功能，请升级后使用")
     if mode not in ("ai", "dup", "both"):
         raise HTTPException(400, "无效的降率模式")
 
