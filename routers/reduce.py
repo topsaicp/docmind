@@ -9,23 +9,29 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from db.database import User
-from routers.auth import get_current_user
+from routers.auth import get_current_user, effective_plan
 from services.text_reducer import reduce_stream
-from config import get_limits
+from config import get_limits, PLAN_LIMITS
 
 router = APIRouter(prefix="/api", tags=["reduce"])
+
+
+def require_verified(user: User):
+    if not user.email_verified:
+        raise HTTPException(403, "请先验证邮箱后再使用此功能")
 
 
 def _check_word_limit(text: str, plan: str):
     wc    = len(text.split())
     limit = get_limits(plan)["reduce_max_words"]
     if wc > limit:
-        plan_label = "专业版" if plan == "pro" else "免费版"
-        raise HTTPException(
-            400,
-            f"文本字数超出{plan_label}上限（当前 {wc} 词，上限 {limit} 词）。"
-            + ("" if plan == "pro" else "升级专业版可提升至 10,000 词。"),
-        )
+        if plan in ("pro", "enterprise"):
+            hint = ""
+        elif plan == "plus":
+            hint = f" 升级专业版可处理最多 {PLAN_LIMITS['pro']['reduce_max_words']} 词。"
+        else:
+            hint = f" 升级基础版可处理 {PLAN_LIMITS['plus']['reduce_max_words']} 词，升级专业版可处理 {PLAN_LIMITS['pro']['reduce_max_words']} 词。"
+        raise HTTPException(400, f"文本字数超出当前套餐上限（当前 {wc} 词，上限 {limit} 词）。{hint}")
 
 
 class ReduceRequest(BaseModel):
@@ -50,7 +56,7 @@ def reduce_text(
     req: ReduceRequest,
     current_user: User = Depends(get_current_user),
 ):
-    from routers.query import effective_plan
+    require_verified(current_user)
     if not req.text.strip():
         raise HTTPException(400, "文本不能为空")
     if req.mode not in ("ai", "dup", "both"):
@@ -66,6 +72,7 @@ async def reduce_upload(
     mode: str = Form("ai"),
     current_user: User = Depends(get_current_user),
 ):
+    require_verified(current_user)
     if mode not in ("ai", "dup", "both"):
         raise HTTPException(400, "无效的降率模式")
 
@@ -92,6 +99,5 @@ async def reduce_upload(
     if not text.strip():
         raise HTTPException(400, "文件内容为空")
 
-    from routers.query import effective_plan
     _check_word_limit(text, effective_plan(current_user))
     return StreamingResponse(_gen(text, mode), media_type="text/event-stream")

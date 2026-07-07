@@ -631,6 +631,67 @@ input,textarea{font-family:inherit}
   </div>
 </div>
 
+<!-- ── Pricing modal ── -->
+<div id="pricing-modal" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:16px">
+  <div style="background:var(--card);border:1px solid var(--border-gold);border-radius:14px;max-width:720px;width:100%;max-height:90vh;overflow-y:auto;padding:32px 28px;position:relative">
+    <button onclick="closePricingModal()" style="position:absolute;top:14px;right:18px;background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer">✕</button>
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:700;color:var(--fg);margin-bottom:6px">选择套餐</div>
+      <div style="font-size:.82rem;color:var(--muted)">升级后联系客服激活：topsai@protonmail.com</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px">
+      <!-- Free -->
+      <div style="border:1px solid var(--border);border-radius:10px;padding:18px 16px">
+        <div style="font-size:.72rem;letter-spacing:.08em;color:var(--muted);margin-bottom:6px">免费版</div>
+        <div style="font-size:1.6rem;font-weight:700;color:var(--fg);margin-bottom:14px">¥0<span style="font-size:.75rem;font-weight:400;color:var(--muted)">/月</span></div>
+        <ul style="list-style:none;font-size:.78rem;color:var(--fg2);line-height:2.1">
+          <li>📄 5 个 PDF 文献</li>
+          <li>💬 每日 20 次问答</li>
+          <li>📝 文献综述（最多 3 篇）</li>
+          <li>🔡 降率工具（800 词/次）</li>
+          <li>📎 引用格式导出</li>
+          <li style="color:var(--muted)">— 图像分析</li>
+        </ul>
+        <div style="margin-top:14px;padding:7px;background:var(--bg2);border-radius:6px;font-size:.73rem;color:var(--muted);text-align:center">当前套餐</div>
+      </div>
+      <!-- Plus -->
+      <div style="border:1px solid rgba(201,168,76,.4);border-radius:10px;padding:18px 16px">
+        <div style="font-size:.72rem;letter-spacing:.08em;color:var(--gold);margin-bottom:6px">基础版</div>
+        <div style="font-size:1.6rem;font-weight:700;color:var(--fg);margin-bottom:14px">¥19.9<span style="font-size:.75rem;font-weight:400;color:var(--muted)">/月</span></div>
+        <ul style="list-style:none;font-size:.78rem;color:var(--fg2);line-height:2.1">
+          <li>📄 30 个 PDF 文献</li>
+          <li>💬 每日 100 次问答</li>
+          <li>📝 文献综述（最多 10 篇）</li>
+          <li>🔡 降率工具（3000 词/次）</li>
+          <li>📎 引用格式导出</li>
+          <li>🖼 图像分析</li>
+        </ul>
+        <button onclick="closePricingModal();showToast('请联系客服 topsai@protonmail.com 激活基础版')"
+          class="abtn abtn-gold" style="width:100%;margin-top:14px;justify-content:center">升级基础版</button>
+      </div>
+      <!-- Pro -->
+      <div style="border:2px solid var(--gold);border-radius:10px;padding:18px 16px;position:relative">
+        <div style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:var(--gold);color:#0f0f1a;font-size:.68rem;font-weight:700;letter-spacing:.08em;padding:2px 10px;border-radius:20px">推荐</div>
+        <div style="font-size:.72rem;letter-spacing:.08em;color:var(--gold);margin-bottom:6px">专业版</div>
+        <div style="font-size:1.6rem;font-weight:700;color:var(--fg);margin-bottom:14px">¥39.9<span style="font-size:.75rem;font-weight:400;color:var(--muted)">/月</span></div>
+        <ul style="list-style:none;font-size:.78rem;color:var(--fg2);line-height:2.1">
+          <li>📄 100 个 PDF 文献</li>
+          <li>💬 无限次问答</li>
+          <li>📝 文献综述（最多 20 篇）</li>
+          <li>🔡 降率工具（10000 词/次）</li>
+          <li>📎 引用格式导出</li>
+          <li>🖼 图像分析</li>
+        </ul>
+        <button onclick="closePricingModal();showToast('请联系客服 topsai@protonmail.com 激活专业版')"
+          class="abtn abtn-gold" style="width:100%;margin-top:14px;justify-content:center">升级专业版</button>
+      </div>
+    </div>
+    <p style="text-align:center;font-size:.72rem;color:var(--muted);margin-top:20px">
+      支持微信/支付宝支付 · 联系客服：topsai@protonmail.com
+    </p>
+  </div>
+</div>
+
 <!-- ── Citation modal ── -->
 <div id="cite-modal">
   <div class="cite-box">
@@ -1111,10 +1172,14 @@ let authMode       = 'login';
 // ── 套餐限额（与 config.py PLAN_LIMITS 保持一致）──
 const PLAN_LIMITS = {
   free: { maxTokens:2048, reviewMaxDocs:3,  reduceMaxWords:800,  dailyQuery:20,  pdfLimit:5   },
-  pro:  { maxTokens:8192, reviewMaxDocs:20, reduceMaxWords:10000,dailyQuery:500, pdfLimit:100 },
+  plus: { maxTokens:4096, reviewMaxDocs:10, reduceMaxWords:3000, dailyQuery:100, pdfLimit:30  },
+  pro:  { maxTokens:8192, reviewMaxDocs:20, reduceMaxWords:10000,dailyQuery:999999,pdfLimit:100},
+  enterprise:{ maxTokens:8192,reviewMaxDocs:20,reduceMaxWords:10000,dailyQuery:999999,pdfLimit:500},
 };
 function getPlanLimits(){ return PLAN_LIMITS[currentUser?.plan] || PLAN_LIMITS.free; }
-function isPro(){ return currentUser?.plan === 'pro'; }
+function isPro(){ return currentUser?.plan==='pro'||currentUser?.plan==='enterprise'; }
+function isPaid(){ return ['plus','pro','enterprise'].includes(currentUser?.plan); }
+function planLabel(p){ return {free:'免费版',plus:'基础版',pro:'专业版',enterprise:'机构版'}[p]||'免费版'; }
 let selectedDocs   = new Set();   // for Q&A + writing
 let reviewDocs     = new Set();   // for 文献综述 page (independent)
 let libSelected    = new Set();   // for batch delete in library
@@ -1506,8 +1571,7 @@ function updateSelectTip(){
   const tip=selectedDocs.size===0?'全部文档参与问答':`已选 ${selectedDocs.size} 篇文献`;
   document.getElementById('dspSelectTip').textContent=tip;
   updateWriteDocCount();
-  const revEl=document.getElementById('reviewDocCount');
-  if(revEl) revEl.textContent=selectedDocs.size||'全部';
+  // 注意：不更新 reviewDocCount，综述页有独立的 reviewDocs 集合
 }
 function updateDspSelectTip(){ updateSelectTip(); }
 
@@ -1535,7 +1599,7 @@ function updateDspUsage(){
     const p=currentUser.pdf_count||0,q=currentUser.query_count_today||0;
     el.innerHTML=`PDF <b style="color:${p>=5?'#f87171':'var(--fg)'}">${p}/5</b>
       &nbsp;·&nbsp; 今日问答 <b style="color:${q>=20?'#f87171':'var(--fg)'}">${q}/20</b>
-      ${p>=4||q>=16?`<br><a href="/" style="color:var(--gold);font-size:.68rem">升级专业版 →</a>`:''}`;
+      ${p>=4||q>=16?`<br><a href="javascript:openPricingModal()" style="color:var(--gold);font-size:.68rem">升级套餐 →</a>`:''}`;
   }
 }
 
@@ -1579,7 +1643,8 @@ async function handleUpload(files, statusElId){
     render();
   }
   loadDocuments();
-  if(currentUser) currentUser.pdf_count=(currentUser.pdf_count||0)+files.length;
+  // 上传后重新从服务器拉取计数，避免部分失败时本地计数偏高
+  loadDocuments();
   updateDspUsage();
 }
 
@@ -2346,7 +2411,7 @@ async function startReview(){
   if(docIds.length > limits.reviewMaxDocs){
     const msg = isPro()
       ? `当前套餐最多支持 ${limits.reviewMaxDocs} 篇文献同时生成综述`
-      : `免费版最多选 ${limits.reviewMaxDocs} 篇文献，专业版可提升至 ${PLAN_LIMITS.pro.reviewMaxDocs} 篇`;
+      : `${planLabel(currentUser?.plan||'free')}最多选 ${limits.reviewMaxDocs} 篇文献，<a href="javascript:openPricingModal()" style="color:var(--gold)">升级套餐</a>可提升上限`;
     alert(msg); return;
   }
   const topic = document.getElementById('reviewTopic').value.trim();
@@ -2408,9 +2473,16 @@ function clearReview(){
 // ══════════════════════════════════════════════════════════════
 function renderAccount(){
   if(!currentUser) return;
-  const el=document.getElementById('accountBody');
-  const isPro=currentUser.plan==='pro';
-  const p=currentUser.pdf_count||0, q=currentUser.query_count_today||0;
+  const el  = document.getElementById('accountBody');
+  const plan = currentUser.plan || 'free';
+  const lim  = getPlanLimits();
+  const p    = currentUser.pdf_count||0;
+  const q    = currentUser.query_count_today||0;
+  const pdfFull  = p >= lim.pdfLimit;
+  const qFull    = lim.dailyQuery < 999999 && q >= lim.dailyQuery;
+  const qDisplay = lim.dailyQuery >= 999999 ? '无限制' : lim.dailyQuery;
+  const pdfDisplay = lim.pdfLimit;
+
   el.innerHTML=`
     <div class="account-card">
       <div class="account-card-title">账号信息</div>
@@ -2427,30 +2499,39 @@ function renderAccount(){
              </span>`
         }
       </div>
-      <div class="account-row"><span class="account-label">当前套餐</span><span class="account-value" style="color:var(--gold)">${isPro?'✦ 专业版':'免费版'}</span></div>
+      <div class="account-row">
+        <span class="account-label">当前套餐</span>
+        <span class="account-value" style="color:var(--gold)">
+          ${plan==='pro'?'✦ 专业版':plan==='plus'?'◆ 基础版':plan==='enterprise'?'★ 机构版':'免费版'}
+          ${currentUser.plan_expires_at&&plan!=='free'?`<span style="font-size:.7rem;color:var(--muted);margin-left:6px">到期：${currentUser.plan_expires_at.slice(0,10)}</span>`:''}
+        </span>
+      </div>
     </div>
     <div class="account-card">
       <div class="account-card-title">使用情况</div>
       <div class="account-row">
         <span class="account-label">PDF 文献数</span>
-        <span class="account-value" style="color:${p>=5?'#f87171':'var(--fg)'}">${p} / ${isPro?'∞':5}</span>
+        <span class="account-value" style="color:${pdfFull?'#f87171':'var(--fg)'}">${p} / ${pdfDisplay}</span>
       </div>
-      ${!isPro?`<div class="usage-bar-track"><div class="usage-bar-fill" style="width:${Math.min(p/5*100,100)}%"></div></div>`:''}
+      <div class="usage-bar-track"><div class="usage-bar-fill" style="width:${Math.min(p/pdfDisplay*100,100)}%"></div></div>
       <div class="account-row" style="margin-top:8px">
         <span class="account-label">今日问答次数</span>
-        <span class="account-value" style="color:${q>=20?'#f87171':'var(--fg)'}">${q} / ${isPro?'∞':20}</span>
+        <span class="account-value" style="color:${qFull?'#f87171':'var(--fg)'}">${q} / ${qDisplay}</span>
       </div>
-      ${!isPro?`<div class="usage-bar-track"><div class="usage-bar-fill" style="width:${Math.min(q/20*100,100)}%"></div></div>`:''}
+      ${lim.dailyQuery<999999?`<div class="usage-bar-track"><div class="usage-bar-fill" style="width:${Math.min(q/lim.dailyQuery*100,100)}%"></div></div>`:''}
     </div>
-    ${!isPro?`<div class="account-card" style="border-color:var(--border-gold)">
-      <div class="account-card-title">升级专业版</div>
-      <p style="font-size:.82rem;color:var(--muted);margin-bottom:14px">无限 PDF 上传 · 无限每日问答 · 优先支持</p>
-      <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:14px">
-        <span style="font-family:'Playfair Display',serif;font-size:2rem;font-weight:700">¥99</span>
-        <span style="font-size:.82rem;color:var(--muted)">/月</span>
-      </div>
-      <a href="/" class="abtn abtn-gold" style="display:inline-block">立即升级</a>
-    </div>`:'<div class="account-card"><div class="account-card-title">专业版权益</div><p style="font-size:.82rem;color:var(--muted)">感谢您的支持！享受无限 PDF 与问答特权。</p></div>'}`;
+    ${plan==='free'||plan==='plus'?`
+    <div class="account-card" style="border-color:var(--border-gold);cursor:pointer" onclick="openPricingModal()">
+      <div class="account-card-title">升级套餐</div>
+      <p style="font-size:.82rem;color:var(--muted);margin-bottom:14px">
+        ${plan==='free'?'解锁更多 PDF、问答次数与高级功能':'升级专业版，享受无限问答与完整功能'}
+      </p>
+      <button class="abtn abtn-gold" style="display:inline-block">查看套餐 →</button>
+    </div>`:`
+    <div class="account-card">
+      <div class="account-card-title">${planLabel(plan)}权益</div>
+      <p style="font-size:.82rem;color:var(--muted)">感谢您的支持！如需升级机构版请联系客服。</p>
+    </div>`}`;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -2485,6 +2566,18 @@ function closeCiteModal(){
 }
 document.getElementById('cite-modal').addEventListener('click',e=>{
   if(e.target===document.getElementById('cite-modal')) closeCiteModal();
+});
+
+// ── Pricing modal ──
+function openPricingModal(){
+  const m=document.getElementById('pricing-modal');
+  m.style.display='flex';
+}
+function closePricingModal(){
+  document.getElementById('pricing-modal').style.display='none';
+}
+document.getElementById('pricing-modal').addEventListener('click',e=>{
+  if(e.target===document.getElementById('pricing-modal')) closePricingModal();
 });
 
 function renderCiteModal(){
@@ -2864,7 +2957,7 @@ async function startReduce(){
   if(wc > limits.reduceMaxWords){
     const tip = isPro()
       ? `文本超出专业版上限（${wc} 词 > ${limits.reduceMaxWords} 词）`
-      : `免费版单次上限 ${limits.reduceMaxWords} 词，当前 ${wc} 词。升级专业版可处理最多 ${PLAN_LIMITS.pro.reduceMaxWords} 词`;
+      : `${planLabel(currentUser?.plan||'free')}单次上限 ${limits.reduceMaxWords} 词，当前 ${wc} 词。<a href="javascript:openPricingModal()" style="color:var(--gold)">升级套餐</a>可提升上限`;
     alert(tip); return;
   }
   isReducing = true;

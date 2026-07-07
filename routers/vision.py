@@ -8,8 +8,8 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from openai import OpenAI
 
-from config import GEMINI_API_KEY, GEMINI_BASE_URL
-from routers.auth import get_current_user
+from config import GEMINI_API_KEY, GEMINI_BASE_URL, get_limits
+from routers.auth import get_current_user, effective_plan
 from db.database import User
 
 router = APIRouter(prefix="/api", tags=["vision"])
@@ -37,6 +37,12 @@ def analyze_image_stream(
     req: ImageAnalyzeRequest,
     current_user: User = Depends(get_current_user),
 ):
+    if not current_user.email_verified:
+        raise HTTPException(403, "请先验证邮箱后再使用此功能")
+    # 图像分析仅 plus 及以上套餐开放
+    plan = effective_plan(current_user)
+    if plan == "free":
+        raise HTTPException(403, "图像分析功能需要基础版或专业版套餐")
     client = _get_client()
 
     system_prompt = "你是一个学术文献分析助手，擅长解读论文截图、图表、公式和表格。"

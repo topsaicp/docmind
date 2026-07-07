@@ -16,36 +16,29 @@ import json
 from services.retriever import ask
 from services.embedder  import collection_count, get_doc_sections, get_doc_header
 from db.database import get_session, User, Document
-from config import FREE_QUERY_DAILY_LIMIT, MODEL_ROUTES, LLM_MODEL, get_limits
-from routers.auth import get_current_user
-from datetime import datetime
+from config import MODEL_ROUTES, LLM_MODEL, get_limits
+from routers.auth import get_current_user, effective_plan
 
 
 def require_verified(user: User):
     if not user.email_verified:
         raise HTTPException(403, "请先验证邮箱后再使用此功能")
 
-
-def effective_plan(user: User) -> str:
-    """计算用户实际套餐（考虑到期 + admin 等同 pro）。"""
-    if user.is_admin:
-        return "pro"
-    if user.plan == "pro" and user.plan_expires_at and user.plan_expires_at < datetime.utcnow():
-        return "free"
-    return user.plan or "free"
-
 router = APIRouter(prefix="/api", tags=["query"])
 
 
 def _check_and_count_query(user: User, session: Session):
-    db_user = session.query(User).filter_by(id=user.id).first()
-    today   = datetime.utcnow().date().isoformat()
+    db_user  = session.query(User).filter_by(id=user.id).first()
+    today    = datetime.utcnow().date().isoformat()
     if db_user.query_date != today:
         db_user.query_count_today = 0
         db_user.query_date        = today
-    # 每日提问次数限制（测试期间暂停）
-    # if db_user.plan == "free" and db_user.query_count_today >= FREE_QUERY_DAILY_LIMIT:
-    #     raise HTTPException(403, f"今日提问次数已达上限（{FREE_QUERY_DAILY_LIMIT}次），请明天再来或升级专业版")
+    plan     = effective_plan(db_user)
+    limit    = get_limits(plan)["daily_query_limit"]
+    if db_user.query_count_today >= limit:
+        plan_names = {"free": "免费版", "plus": "基础版", "pro": "专业版"}
+        label = plan_names.get(plan, plan)
+        raise HTTPException(403, f"今日问答次数已达{label}上限（{limit} 次），请明日再来或升级套餐")
     db_user.query_count_today += 1
     session.commit()
 
@@ -122,7 +115,11 @@ def ask_stream(req: AskRequest, session: Session = Depends(get_session),
 
 
 @router.get("/documents/{doc_id}/sections")
-def get_sections(doc_id: str, current_user: User = Depends(get_current_user)):
+def get_sections(doc_id: str, current_user: User = Depends(get_current_user),
+                 session: Session = Depends(get_session)):
+    doc = session.query(Document).filter_by(id=doc_id, user_id=current_user.id).first()
+    if not doc:
+        raise HTTPException(404, "文档不存在")
     sections = get_doc_sections(doc_id)
     return {"doc_id": doc_id, "sections": sections}
 

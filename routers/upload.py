@@ -11,11 +11,11 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
 from fastapi.responses import FileResponse as _FileResponse
 from sqlalchemy.orm import Session
 
-from config import UPLOAD_DIR, MAX_FILE_SIZE_MB, ALLOWED_EXT, FREE_PDF_LIMIT
+from config import UPLOAD_DIR, MAX_FILE_SIZE_MB, ALLOWED_EXT, get_limits
 from db.database import get_session, Document, User
 from services.pdf_processor import process_pdf
 from services.embedder import add_chunks, delete_doc
-from routers.auth import get_current_user
+from routers.auth import get_current_user, effective_plan
 
 router = APIRouter(prefix="/api", tags=["documents"])
 
@@ -64,6 +64,13 @@ async def upload_pdf(
     current_user: User = Depends(get_current_user),
 ):
     require_verified(current_user)
+
+    # PDF 数量上限
+    plan   = effective_plan(current_user)
+    limits = get_limits(plan)
+    db_user = session.query(User).filter_by(id=current_user.id).first()
+    if db_user.pdf_count >= limits["pdf_limit"]:
+        raise HTTPException(403, f"已达到当前套餐 PDF 上限（{limits['pdf_limit']} 个），请升级套餐后继续上传")
 
     # 格式校验
     suffix = Path(file.filename).suffix.lower()

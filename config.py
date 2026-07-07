@@ -79,20 +79,36 @@ EMAIL_VERIFY_HOURS  = 24   # 验证链接有效期（小时）
 # ── 套餐限额配置表 ────────────────────────────────────────────────────
 PLAN_LIMITS: dict[str, dict] = {
     "free": {
-        "max_tokens":        2048,   # LLM 单次最大输出 token
-        "review_chunks":     6,      # 综述：每篇文献检索块数
-        "review_max_docs":   3,      # 综述：最多选取文献篇数
-        "reduce_max_words":  800,    # 降率工具：单次最大英文单词数
-        "daily_query_limit": 20,     # 每日提问次数上限
-        "pdf_limit":         5,      # 可上传 PDF 总数
+        "max_tokens":        2048,
+        "review_chunks":     6,
+        "review_max_docs":   3,
+        "reduce_max_words":  800,
+        "daily_query_limit": 20,
+        "pdf_limit":         5,
+    },
+    "plus": {
+        "max_tokens":        4096,
+        "review_chunks":     8,
+        "review_max_docs":   10,
+        "reduce_max_words":  3000,
+        "daily_query_limit": 100,
+        "pdf_limit":         30,
     },
     "pro": {
         "max_tokens":        8192,
         "review_chunks":     12,
         "review_max_docs":   20,
         "reduce_max_words":  10000,
-        "daily_query_limit": 500,
+        "daily_query_limit": 999999,
         "pdf_limit":         100,
+    },
+    "enterprise": {
+        "max_tokens":        8192,
+        "review_chunks":     12,
+        "review_max_docs":   20,
+        "reduce_max_words":  10000,
+        "daily_query_limit": 999999,
+        "pdf_limit":         500,
     },
 }
 

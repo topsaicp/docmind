@@ -65,6 +65,15 @@ def get_current_user(
     return user
 
 
+def effective_plan(user: User) -> str:
+    """计算实际生效的套餐（admin→pro；付费套餐到期→free）。"""
+    if user.is_admin:
+        return "pro"
+    if user.plan in ("pro", "plus", "enterprise") and user.plan_expires_at and user.plan_expires_at < datetime.utcnow():
+        return "free"
+    return user.plan or "free"
+
+
 # ── 请求体 ────────────────────────────────────────────────────
 class AuthReq(BaseModel):
     email: str
@@ -196,7 +205,8 @@ def me(user: User = Depends(get_current_user), session: Session = Depends(get_se
         session.commit()
     return {
         "email":             db_user.email,
-        "plan":              db_user.plan,
+        "plan":              effective_plan(db_user),   # 返回实际生效套餐（到期自动降级）
+        "plan_raw":          db_user.plan,              # 原始 DB 值（前端展示到期提示用）
         "plan_expires_at":   str(db_user.plan_expires_at) if db_user.plan_expires_at else None,
         "pdf_count":         db_user.pdf_count,
         "query_count_today": db_user.query_count_today,
