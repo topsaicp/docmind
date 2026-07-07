@@ -574,57 +574,66 @@ input, textarea { font-family: inherit; }
       </p>
     </div>
     <div class="pricing-grid">
+      <!-- 免费版 -->
       <div class="plan-card">
-        <div class="plan-name">基础版</div>
-        <div class="plan-desc">适合个人研究探索</div>
+        <div class="plan-name">免费版</div>
+        <div class="plan-desc">个人研究者起步首选</div>
         <div class="plan-price"><span class="plan-price-num">免费</span></div>
         <ul class="plan-features">
-          <li><span class="plan-check">✦</span> 最多 5 篇 PDF</li>
+          <li><span class="plan-check">✦</span> 最多 5 篇 PDF 文献</li>
+          <li><span class="plan-check">✦</span> 每日 20 次智能问答</li>
           <li><span class="plan-check">✦</span> 知识库问答 + 章节精读</li>
-          <li><span class="plan-check">✦</span> PDF 精读对话（含截图分析）</li>
-          <li><span class="plan-check">✦</span> 文献综述 + 论文撰写</li>
-          <li><span class="plan-check">✦</span> 引用格式导出</li>
-          <li><span class="plan-check">✦</span> 每日 20 次问答</li>
+          <li><span class="plan-check">✦</span> 多轮对话上下文记忆</li>
+          <li><span class="plan-check">✦</span> 文献综述生成（最多 3 篇）</li>
+          <li><span class="plan-check">✦</span> 基础论文写作辅助</li>
+          <li><span class="plan-check">✦</span> 引用格式导出（APA/MLA/GB·T）</li>
         </ul>
         <a href="/app" class="btn-plan-ghost">免费开始</a>
       </div>
+      <!-- 基础版 -->
+      <div class="plan-card">
+        <div class="plan-name">基础版</div>
+        <div class="plan-desc">研究生与科研人员首选</div>
+        <div class="plan-price">
+          <span class="plan-price-num">¥9.9</span>
+          <span class="plan-price-period">/月</span>
+        </div>
+        <ul class="plan-features">
+          <li><span class="plan-check">✦</span> 最多 30 篇 PDF 文献</li>
+          <li><span class="plan-check">✦</span> 每日 100 次智能问答</li>
+          <li><span class="plan-check">✦</span> 全部免费版功能</li>
+          <li><span class="plan-check">✦</span> PDF 截图智能分析（图表/公式/表格）</li>
+          <li><span class="plan-check">✦</span> 文献综述（最多 10 篇，更长篇幅）</li>
+          <li><span class="plan-check">✦</span> 降率工具 AI 率检测（3000 词/次）</li>
+          <li><span class="plan-check">✦</span> 更长回复模式（2× token）</li>
+          <li><span class="plan-check">✦</span> 专属邮件客服</li>
+        </ul>
+        <button class="btn-plan-primary" onclick="openPayment('plus')">立即订阅</button>
+      </div>
+      <!-- 专业版 -->
       <div class="plan-card highlight">
         <div class="plan-badge">最受欢迎</div>
         <div class="plan-name">专业版</div>
-        <div class="plan-desc">适合活跃研究者与研究生</div>
+        <div class="plan-desc">活跃研究者与高产写作者</div>
         <div class="plan-price">
-          <span class="plan-price-num">¥99</span>
+          <span class="plan-price-num">¥19.9</span>
           <span class="plan-price-period">/月</span>
         </div>
         <ul class="plan-features">
-          <li><span class="plan-check">✦</span> 无限 PDF 上传</li>
+          <li><span class="plan-check">✦</span> 最多 100 篇 PDF 文献</li>
+          <li><span class="plan-check">✦</span> 无限每日问答次数</li>
           <li><span class="plan-check">✦</span> 全部基础版功能</li>
-          <li><span class="plan-check">✦</span> 不限每日问答次数</li>
-          <li><span class="plan-check">✦</span> 英文降率工具（AI 率 + 重复率）</li>
-          <li><span class="plan-check">✦</span> 优先 API 配额</li>
-          <li><span class="plan-check">✦</span> 优先客服支持</li>
+          <li><span class="plan-check">✦</span> 降率工具 AI 率 + 重复率双检（10000 词/次）</li>
+          <li><span class="plan-check">✦</span> 文献综述（最多 20 篇文献）</li>
+          <li><span class="plan-check">✦</span> 超长回复模式（4× token）</li>
+          <li><span class="plan-check">✦</span> 高峰期优先 API 配额</li>
+          <li><span class="plan-check">✦</span> 优先客服支持（24h 响应）</li>
         </ul>
         <button class="btn-plan-primary" onclick="openPayment('pro')">立即订阅</button>
       </div>
-      <div class="plan-card">
-        <div class="plan-name">机构版</div>
-        <div class="plan-desc">适合高校院系与研究机构</div>
-        <div class="plan-price">
-          <span class="plan-price-num">¥499</span>
-          <span class="plan-price-period">/月</span>
-        </div>
-        <ul class="plan-features">
-          <li><span class="plan-check">✦</span> 多用户席位（≤20）</li>
-          <li><span class="plan-check">✦</span> 全部专业版功能</li>
-          <li><span class="plan-check">✦</span> 人工降率服务优先通道</li>
-          <li><span class="plan-check">✦</span> 私有化部署支持</li>
-          <li><span class="plan-check">✦</span> 专属客服经理</li>
-        </ul>
-        <a href="mailto:topsai@protonmail.com?subject=DocMind机构版咨询" class="btn-plan-ghost">联系我们</a>
-      </div>
     </div>
     <p style="text-align:center;font-size:.75rem;color:rgba(255,255,255,.2);margin-top:20px">
-      支持 微信支付 · 支付宝 · 银联 · VISA / Mastercard
+      支持 支付宝 · 微信支付 · 银联
     </p>
   </div>
 </section>
@@ -636,20 +645,27 @@ input, textarea { font-family: inherit; }
     <div style="text-align:center;margin-bottom:24px">
       <div style="font-size:2rem;margin-bottom:8px">🔐</div>
       <div style="font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--fg);font-weight:700" id="pay-plan-name">专业版</div>
-      <div style="color:var(--muted);font-size:.82rem;margin-top:4px">7天免费试用，随时取消</div>
+      <div style="color:var(--muted);font-size:.82rem;margin-top:4px">订阅后发送邮件确认激活</div>
     </div>
     <div style="background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.15);
                 border-radius:8px;padding:16px;margin-bottom:22px;text-align:center">
-      <div style="font-family:'Playfair Display',serif;font-size:2rem;color:var(--fg);font-weight:700" id="pay-price">¥99</div>
-      <div style="font-size:.75rem;color:var(--muted)">首月免费试用</div>
+      <div style="font-family:'Playfair Display',serif;font-size:2rem;color:var(--fg);font-weight:700" id="pay-price">¥19.9</div>
+      <div style="font-size:.75rem;color:var(--muted)">/月，随时可取消</div>
     </div>
     <div style="display:flex;flex-direction:column;gap:10px">
-      <a href="#" id="pay-wechat" class="btn-plan-primary" style="display:block;text-align:center;padding:13px;border-radius:6px">💚 微信支付</a>
-      <a href="#" id="pay-alipay" style="display:block;text-align:center;padding:13px;border-radius:6px;
-         background:transparent;color:var(--fg);border:1px solid var(--border);border-radius:6px;font-size:.88rem">🔵 支付宝</a>
+      <a href="#" id="pay-alipay" target="_blank" rel="noopener"
+         style="display:block;text-align:center;padding:13px;border-radius:6px;
+                background:#1677ff;color:#fff;font-weight:600;font-size:.9rem;text-decoration:none">
+        🔵 支付宝付款
+      </a>
+      <a href="#" id="pay-wechat"
+         style="display:block;text-align:center;padding:13px;border-radius:6px;
+                background:transparent;color:var(--fg);border:1px solid var(--border);font-size:.88rem;text-decoration:none">
+        💚 微信支付（联系客服）
+      </a>
     </div>
-    <p style="text-align:center;font-size:.72rem;color:rgba(255,255,255,.2);margin-top:14px">
-      支付遇到问题？联系 topsai@protonmail.com
+    <p style="font-size:.72rem;color:var(--muted);margin-top:14px;text-align:center">
+      付款后发送截图至 <a href="mailto:topsai@protonmail.com" style="color:var(--gold)">topsai@protonmail.com</a> 激活账号
     </p>
   </div>
 </div>
@@ -832,9 +848,10 @@ function updateNavbar(user) {
 }
 
 // ── Payment modal ─────────────────────────────────────────────
+// 支付宝收款链接 → 替换 ALIPAY_PLUS / ALIPAY_PRO 为真实二维码链接
 const PAY_INFO={
-  pro:{name:'专业版',price:'¥99/月',wechat:'#',alipay:'#'},
-  enterprise:{name:'机构版',price:'¥499/月',wechat:'#',alipay:'#'},
+  plus:{name:'基础版',price:'¥9.9/月',alipay:'ALIPAY_PLUS',wechat:'#'},
+  pro: {name:'专业版',price:'¥19.9/月',alipay:'ALIPAY_PRO', wechat:'#'},
 };
 function openPayment(plan){
   const info=PAY_INFO[plan]||PAY_INFO.pro;

@@ -9,12 +9,16 @@ from datetime import datetime
 router = APIRouter(prefix="/api/payment", tags=["payment"])
 
 PLANS = {
+    "plus": {
+        "id": "plus_monthly", "name": "基础版", "price": 9.9,
+        "currency": "CNY", "period": "month", "days": 30,
+    },
     "pro": {
-        "id": "pro_monthly", "name": "专业版", "price": 99,
+        "id": "pro_monthly", "name": "专业版", "price": 19.9,
         "currency": "CNY", "period": "month", "days": 30,
     },
     "enterprise": {
-        "id": "enterprise_monthly", "name": "机构版", "price": 499,
+        "id": "enterprise_monthly", "name": "机构版", "price": 199,
         "currency": "CNY", "period": "month", "days": 30,
     },
 }

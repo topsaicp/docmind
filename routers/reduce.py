@@ -58,12 +58,15 @@ def reduce_text(
 ):
     require_verified(current_user)
     plan = effective_plan(current_user)
-    if plan not in ("pro", "enterprise"):
-        raise HTTPException(403, "降率工具为专业版专属功能，请升级后使用")
+    if plan not in ("plus", "pro", "enterprise"):
+        raise HTTPException(403, "降率工具需要基础版或以上套餐，升级后即可使用")
     if not req.text.strip():
         raise HTTPException(400, "文本不能为空")
     if req.mode not in ("ai", "dup", "both"):
         raise HTTPException(400, "无效的降率模式")
+    # 基础版仅支持 AI 率检测，重复率为专业版专属
+    if plan == "plus" and req.mode in ("dup", "both"):
+        raise HTTPException(403, "重复率检测为专业版专属功能，升级后可使用完整双检测")
     _check_word_limit(req.text, plan)
     return StreamingResponse(_gen(req.text, req.mode), media_type="text/event-stream")
 
@@ -76,8 +79,8 @@ async def reduce_upload(
 ):
     require_verified(current_user)
     plan = effective_plan(current_user)
-    if plan not in ("pro", "enterprise"):
-        raise HTTPException(403, "降率工具为专业版专属功能，请升级后使用")
+    if plan not in ("plus", "pro", "enterprise"):
+        raise HTTPException(403, "降率工具需要基础版或以上套餐，升级后即可使用")
     if mode not in ("ai", "dup", "both"):
         raise HTTPException(400, "无效的降率模式")
 
@@ -103,6 +106,7 @@ async def reduce_upload(
 
     if not text.strip():
         raise HTTPException(400, "文件内容为空")
-
-    _check_word_limit(text, effective_plan(current_user))
+    if plan == "plus" and mode in ("dup", "both"):
+        raise HTTPException(403, "重复率检测为专业版专属功能，升级后可使用完整双检测")
+    _check_word_limit(text, plan)
     return StreamingResponse(_gen(text, mode), media_type="text/event-stream")
