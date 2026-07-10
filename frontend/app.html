@@ -2628,7 +2628,7 @@ async function doLitSearch(){
   try {
     const resp = await apiFetch('/api/search/literature',{
       method:'POST',
-      body: JSON.stringify({topic, limit:12}),
+      body: JSON.stringify({topic, limit:30}),
     });
     if(!resp.ok){
       const e = await resp.json().catch(()=>({}));
