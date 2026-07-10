@@ -761,7 +761,7 @@ input,textarea{font-family:inherit}
 
     <div class="nav-divider"></div>
     <div class="nav-section-label">即将推出</div>
-    <button class="nav-item nav-disabled"><span class="nav-icon">🔍</span><span class="nav-text">AI 检索</span><span class="nav-soon">即将推出</span></button>
+    <button class="nav-item" id="nav-search" onclick="goPage('search')"><span class="nav-icon">🔍</span><span class="nav-text">文献检索</span></button>
     <button class="nav-item nav-disabled"><span class="nav-icon">📊</span><span class="nav-text">数据提取</span><span class="nav-soon">即将推出</span></button>
     <button class="nav-item nav-disabled"><span class="nav-icon">🔬</span><span class="nav-text">深度研究</span><span class="nav-soon">即将推出</span></button>
 
@@ -943,6 +943,41 @@ input,textarea{font-family:inherit}
         <span class="page-title">👤 我的账号</span>
       </div>
       <div class="account-body" id="accountBody"></div>
+    </div>
+
+    <!-- ─── Page: 文献检索 ─── -->
+    <div class="page" id="page-search" style="flex-direction:column;overflow-y:auto;padding:28px 32px;gap:0">
+      <div class="page-header" style="margin-bottom:20px">
+        <span class="page-title">🔍 文献检索</span>
+        <span style="font-size:.78rem;color:var(--muted);margin-left:10px">外文数据库 · AI 关键词 · APA 格式</span>
+      </div>
+
+      <!-- 搜索框 -->
+      <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:20px">
+        <label style="font-size:.8rem;color:var(--muted);display:block;margin-bottom:8px">输入研究主题（中英文均可）</label>
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <textarea id="searchTopic" rows="2"
+            placeholder="例：量子计算在密码学中的应用  /  transformer attention mechanism"
+            style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:6px;
+                   color:var(--fg);font-size:.9rem;padding:10px 12px;resize:none;
+                   font-family:inherit;line-height:1.5"
+            onkeydown="if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();doLitSearch()}"
+          ></textarea>
+          <button onclick="doLitSearch()" id="searchBtn"
+            class="abtn abtn-gold" style="padding:10px 20px;white-space:nowrap;flex-shrink:0">
+            🔍 AI 检索
+          </button>
+        </div>
+        <!-- 关键词标签 -->
+        <div id="searchKeywords" style="display:none;margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+          <span style="font-size:.72rem;color:var(--muted)">检索词：</span>
+          <div id="kwTags" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+        </div>
+      </div>
+
+      <!-- 结果区 -->
+      <div id="searchStatus" style="display:none;color:var(--muted);font-size:.85rem;margin-bottom:12px"></div>
+      <div id="searchResults" style="display:flex;flex-direction:column;gap:12px"></div>
     </div>
 
     <!-- ─── Page: 降率工具 ─── -->
@@ -1371,9 +1406,9 @@ function updateTopbar(){
 // ══════════════════════════════════════════════════════════════
 const PAGE_NAV={
   library:'nav-library',qa:'nav-qa',write:'nav-write',review:'nav-review',
-  reduce:'nav-reduce', pdfchat:'',
+  reduce:'nav-reduce', pdfchat:'', search:'nav-search',
   history:'nav-history',account:'nav-account',
-  search:'',extract:'',deep:''
+  extract:'',deep:''
 };
 function goPage(name){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -2569,6 +2604,126 @@ function closeCiteModal(){
 document.getElementById('cite-modal').addEventListener('click',e=>{
   if(e.target===document.getElementById('cite-modal')) closeCiteModal();
 });
+
+// ── 文献检索 ──────────────────────────────────────────────────────────────
+let _searchAbort = null;
+
+async function doLitSearch(){
+  const topic = document.getElementById('searchTopic').value.trim();
+  if(!topic){ showToast('请输入研究主题'); return; }
+
+  const btn    = document.getElementById('searchBtn');
+  const status = document.getElementById('searchStatus');
+  const resDiv = document.getElementById('searchResults');
+  const kwDiv  = document.getElementById('searchKeywords');
+  const kwTags = document.getElementById('kwTags');
+
+  btn.disabled = true;
+  btn.textContent = '检索中…';
+  status.style.display = 'block';
+  status.textContent   = 'AI 正在提取关键词并检索数据库…';
+  resDiv.innerHTML = '';
+  kwDiv.style.display  = 'none';
+
+  try {
+    const resp = await apiFetch('/api/search/literature',{
+      method:'POST',
+      body: JSON.stringify({topic, limit:12}),
+    });
+    if(!resp.ok){
+      const e = await resp.json().catch(()=>({}));
+      throw new Error(e.detail || '检索失败');
+    }
+    const data = await resp.json();
+
+    // 显示关键词
+    if(data.keywords?.length){
+      kwTags.innerHTML = data.keywords.map(k=>
+        `<span style="background:rgba(201,168,76,.12);color:var(--gold);font-size:.72rem;
+                      padding:2px 8px;border-radius:12px;border:1px solid rgba(201,168,76,.25)">${esc(k)}</span>`
+      ).join('');
+      kwDiv.style.display = 'flex';
+    }
+
+    status.textContent = `找到 ${data.total} 篇文献，按引用数排序`;
+    resDiv.innerHTML = data.results.map((r,i) => _renderSearchResult(r,i)).join('');
+
+    if(!data.results.length){
+      resDiv.innerHTML = `<div style="color:var(--muted);text-align:center;padding:40px;font-size:.88rem">
+        未找到相关文献，请尝试更换关键词</div>`;
+    }
+
+  } catch(e){
+    status.textContent = '';
+    resDiv.innerHTML = `<div style="color:#f87171;font-size:.85rem;padding:12px">${esc(e.message)}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔍 AI 检索';
+  }
+}
+
+function _renderSearchResult(r, idx){
+  const authors = (r.authors||[]).slice(0,3).join('; ') + (r.authors?.length>3?' 等':'');
+  const abstract = r.abstract
+    ? `<div style="font-size:.76rem;color:var(--muted);margin-top:7px;line-height:1.6">${esc(r.abstract)}…</div>` : '';
+  const citeTag  = r.citations!=null
+    ? `<span style="font-size:.7rem;color:var(--muted);margin-left:8px">被引 ${r.citations} 次</span>` : '';
+  const srcTag   = `<span style="font-size:.68rem;background:rgba(255,255,255,.06);
+    padding:1px 7px;border-radius:10px;color:var(--muted)">${esc(r.source)}</span>`;
+  const doiLink  = r.url
+    ? `<a href="${esc(r.url)}" target="_blank" rel="noopener"
+         style="font-size:.73rem;color:var(--gold);text-decoration:none">🔗 查看原文</a>` : '';
+
+  return `<div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px 18px">
+    <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:6px">
+      <span style="font-size:.7rem;color:var(--muted);flex-shrink:0;margin-top:2px">[${idx+1}]</span>
+      <div style="flex:1">
+        <div style="font-size:.9rem;font-weight:600;color:var(--fg);line-height:1.4">${esc(r.title||'—')}</div>
+        <div style="font-size:.76rem;color:var(--muted);margin-top:4px">${esc(authors)} · ${esc(String(r.year||''))}</div>
+        ${r.venue?`<div style="font-size:.74rem;color:var(--muted);font-style:italic">${esc(r.venue)}</div>`:''}
+        ${abstract}
+      </div>
+    </div>
+    <div style="background:var(--bg2);border-radius:6px;padding:8px 10px;font-size:.74rem;
+                color:var(--fg2);font-family:'Courier New',monospace;line-height:1.5;margin-bottom:10px;
+                word-break:break-all">${esc(r.apa||'')}</div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      ${srcTag} ${citeTag}
+      <div style="flex:1"></div>
+      ${doiLink}
+      <button onclick="copyApa(${idx})" data-apa="${escAttr(r.apa||'')}"
+        style="font-size:.73rem;padding:3px 10px;border-radius:5px;border:1px solid var(--border);
+               background:transparent;color:var(--fg);cursor:pointer">📋 复制 APA</button>
+      <button onclick="addToRefList(${idx})" data-apa="${escAttr(r.apa||'')}" data-title="${escAttr(r.title||'')}"
+        style="font-size:.73rem;padding:3px 10px;border-radius:5px;border:1px solid rgba(201,168,76,.3);
+               background:transparent;color:var(--gold);cursor:pointer">+ 加入引用</button>
+    </div>
+  </div>`;
+}
+
+function escAttr(s){ return (s||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+function copyApa(idx){
+  const btn = document.querySelectorAll('[data-apa]')[idx*2];  // 每个结果有2个 data-apa 按钮
+  const apa = btn?.dataset.apa || '';
+  navigator.clipboard.writeText(apa).then(()=>showToast('APA 格式已复制'));
+}
+
+function addToRefList(idx){
+  const btns = document.querySelectorAll('[data-title]');
+  const btn  = btns[idx];
+  const title = btn?.dataset.title || '';
+  const apa   = btn?.dataset.apa  || '';
+  // 存入 sessionStorage 给引用列表用，并提示
+  let refs = JSON.parse(sessionStorage.getItem('refList')||'[]');
+  if(!refs.find(r=>r.apa===apa)){
+    refs.push({title, apa});
+    sessionStorage.setItem('refList', JSON.stringify(refs));
+    showToast('已加入引用列表，可在"引用管理"中查看');
+  } else {
+    showToast('该文献已在引用列表中');
+  }
+}
 
 // ── Pricing modal ──
 function openPricingModal(){
