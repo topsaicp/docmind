@@ -2628,11 +2628,15 @@ async function doLitSearch(){
   try {
     const resp = await authFetch(`${API}/api/search/literature`,{
       method:'POST',
+      headers:{'Content-Type':'application/json'},
       body: JSON.stringify({topic, limit:30}),
     });
     if(!resp.ok){
       const e = await resp.json().catch(()=>({}));
-      throw new Error(e.detail || '检索失败');
+      const msg = typeof e.detail === 'string' ? e.detail
+                : Array.isArray(e.detail) ? e.detail.map(x=>x.msg||JSON.stringify(x)).join('; ')
+                : '检索失败，请稍后重试';
+      throw new Error(msg);
     }
     const data = await resp.json();
 
