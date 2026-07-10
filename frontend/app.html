@@ -2626,7 +2626,7 @@ async function doLitSearch(){
   kwDiv.style.display  = 'none';
 
   try {
-    const resp = await apiFetch('/api/search/literature',{
+    const resp = await authFetch(`${API}/api/search/literature`,{
       method:'POST',
       body: JSON.stringify({topic, limit:30}),
     });
