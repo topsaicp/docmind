@@ -12,7 +12,8 @@ for d in [UPLOAD_DIR, MARKDOWN_DIR, CHROMA_DIR]:
 # ── API Keys ──────────────────────────────────────────────────────────
 GROQ_API_KEY      = os.getenv("GROQ_API_KEY",      "")
 DEEPSEEK_API_KEY  = os.getenv("DEEPSEEK_API_KEY",  "")
-GEMINI_API_KEY    = os.getenv("GEMINI_API_KEY",    "")   # 视觉分析
+GLM_API_KEY       = os.getenv("GLM_API_KEY", "")         # 智谱 GLM 视觉分析
+GEMINI_API_KEY    = GLM_API_KEY                           # 兼容旧引用
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")   # 预留
 OPENAI_API_KEY    = os.getenv("OPENAI_API_KEY",    "")   # 预留
 
@@ -20,7 +21,7 @@ GROQ_BASE_URL      = "https://api.groq.com/openai/v1"
 DEEPSEEK_BASE_URL  = "https://api.deepseek.com"
 ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1"
 OPENAI_BASE_URL    = "https://api.openai.com/v1"
-GEMINI_BASE_URL    = "https://generativelanguage.googleapis.com/v1beta/openai/"
+GEMINI_BASE_URL    = "https://open.bigmodel.cn/api/paas/v4/"   # 智谱 GLM
 
 # ── 多模型路由表 ───────────────────────────────────────────────────────
 # 每项格式: (api_key, base_url, model_id)

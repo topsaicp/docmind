@@ -20,7 +20,7 @@ def _get_client() -> OpenAI:
     global _client
     if _client is None:
         if not GEMINI_API_KEY:
-            raise HTTPException(503, "视觉分析功能未配置（缺少 GEMINI_API_KEY）")
+            raise HTTPException(503, "视觉分析功能未配置（缺少 GLM_API_KEY）")
         _client = OpenAI(api_key=GEMINI_API_KEY, base_url=GEMINI_BASE_URL)
     return _client
 
@@ -67,7 +67,7 @@ def analyze_image_stream(
     def event_gen():
         try:
             resp = client.chat.completions.create(
-                model="gemini-2.5-flash",
+                model="glm-4v-flash",
                 messages=messages,
                 max_tokens=2048,
                 stream=True,
