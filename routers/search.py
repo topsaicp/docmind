@@ -179,10 +179,9 @@ def search_literature(req: SearchReq, current_user: User = Depends(get_current_u
     keywords = _extract_keywords(req.topic)
     query    = " ".join(keywords[:4])
 
-    # Step 2: 并行检索（各取一半配额，去重后合并）
-    half   = max(req.limit // 2, 4)
-    ss_raw = _semantic_scholar(query, limit=half + 2)
-    cr_raw = _crossref(query, limit=half)
+    # Step 2: 两库各自取 limit 条，去重合并后最终截取 limit
+    ss_raw = _semantic_scholar(query, limit=req.limit)
+    cr_raw = _crossref(query, limit=req.limit)
 
     # Step 3: 格式化 + 去重（按 DOI）
     results  = []
