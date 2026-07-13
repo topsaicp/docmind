@@ -514,6 +514,49 @@ input,textarea{font-family:inherit}
   .review-layout{grid-template-columns:1fr}
   .rev-doc-panel{display:none}
 }
+/* ── 综述模块编辑器 ── */
+.rev-mods{display:flex;flex-direction:column;gap:5px;margin-bottom:8px}
+.rev-mods-label{font-size:.72rem;color:var(--muted);display:flex;justify-content:space-between;align-items:center}
+.rev-mod-item{display:flex;align-items:center;gap:7px;padding:5px 8px;border:1px solid var(--border);
+  border-radius:7px;background:rgba(255,255,255,.03);font-size:.76rem;cursor:default}
+.rev-mod-item.off{opacity:.42}
+.rev-mod-item input[type=checkbox]{accent-color:var(--gold);cursor:pointer}
+.rev-mod-name{flex:1;color:var(--fg,#eee)}
+.rev-mod-btns{display:flex;gap:2px}
+.rev-mod-btns button{background:none;border:none;color:var(--muted);cursor:pointer;
+  font-size:.7rem;padding:1px 4px;border-radius:4px}
+.rev-mod-btns button:hover{color:var(--gold);background:rgba(201,168,76,.12)}
+.rev-mod-add{display:flex;gap:6px}
+.rev-mod-add input{flex:1;background:rgba(255,255,255,.05);border:1px solid var(--border);
+  border-radius:7px;padding:5px 8px;font-size:.74rem;color:inherit}
+.rev-mod-add input:focus{border-color:rgba(201,168,76,.4);outline:none}
+.rev-mod-add button{white-space:nowrap}
+
+/* ── 综述结果区：目录 + 正文两栏 ── */
+.review-result-wrap{flex:1;display:grid;grid-template-columns:190px 1fr;gap:0;
+  margin:16px;overflow:hidden;background:var(--card);border:1px solid var(--border);border-radius:12px}
+.review-toc{border-right:1px solid var(--border);overflow-y:auto;padding:14px 10px;display:none}
+.review-toc.show{display:block}
+.review-toc-title{font-size:.68rem;color:var(--muted);letter-spacing:.08em;margin-bottom:8px;padding-left:8px}
+.review-toc a{display:block;padding:5px 8px;font-size:.74rem;color:var(--muted);
+  text-decoration:none;border-radius:6px;border-left:2px solid transparent;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:all .12s}
+.review-toc a:hover{color:var(--gold)}
+.review-toc a.active{color:var(--gold);border-left-color:var(--gold);background:rgba(201,168,76,.08)}
+.review-toc a.lv3{padding-left:20px;font-size:.7rem}
+.review-body-col{overflow-y:auto;padding:20px 24px}
+.review-body-col h2{font-size:1.02rem;color:var(--gold);margin:22px 0 10px;
+  padding-bottom:6px;border-bottom:1px solid var(--border)}
+.review-body-col h2:first-child{margin-top:0}
+.review-body-col h3{font-size:.9rem;color:var(--fg,#eee);margin:16px 0 8px}
+.review-body-col p{font-size:.84rem;line-height:1.85;margin:0 0 10px;color:inherit}
+@media (max-width:900px){
+  .review-result-wrap{grid-template-columns:1fr}
+  .review-toc{display:none!important}
+}
+
+
+
 
 /* ── PDF Text Layer ── */
 .pdf-page-wrap{position:relative;display:block;margin:0 auto}
@@ -906,6 +949,15 @@ input,textarea{font-family:inherit}
 
           <!-- Controls below doc list -->
           <div class="rev-controls">
+            <div class="rev-mods">
+              <div class="rev-mods-label"><span>综述结构模块（勾选启用，可排序）</span></div>
+              <div id="revModList"></div>
+              <div class="rev-mod-add">
+                <input id="revModInput" placeholder="自定义模块，如：政策梳理" onkeydown="if(event.key==='Enter')addRevModule()">
+                <button class="abtn abtn-ghost" style="font-size:.68rem;padding:4px 10px" onclick="addRevModule()">＋ 添加</button>
+              </div>
+            </div>
+              
             <div class="rev-controls-label">综述主题（可选，不填则自动归纳）</div>
             <input class="rev-topic-input" id="reviewTopic" placeholder="例：基于深度学习的医学图像分析">
             <div class="rev-btn-row">
@@ -917,10 +969,13 @@ input,textarea{font-family:inherit}
             <div id="reviewStatus" style="font-size:.72rem;color:var(--muted);min-height:1em"></div>
           </div>
         </div>
-        <!-- Right: result only -->
+        <!-- Right: TOC + result -->
         <div class="review-main">
-          <div class="review-result" id="reviewResult">
-            <div class="review-empty-tip">从左侧勾选文献并输入主题，点击「生成综述」开始自动撰写</div>
+          <div class="review-result-wrap">
+            <nav class="review-toc" id="reviewToc"></nav>
+            <div class="review-body-col review-result" id="reviewResult">
+              <div class="review-empty-tip">从左侧勾选文献、设定结构模块，点击「生成综述」开始自动撰写</div>
+            </div>
           </div>
         </div>
       </div>
@@ -2465,6 +2520,48 @@ function clearRevText(){
   updateRevTextMeta();
 }
 
+/* ── 综述结构模块 ── */
+let reviewModules = [
+  {name:'研究背景与意义', on:true},
+  {name:'核心方法与技术路线对比', on:true},
+  {name:'主要研究发现', on:true},
+  {name:'数据集与实验设置', on:false},
+  {name:'研究不足与争议', on:true},
+  {name:'未来研究方向', on:true},
+];
+let reviewRawText = '';
+
+function renderRevModules(){
+  const box=document.getElementById('revModList'); if(!box) return;
+  box.innerHTML='';
+  reviewModules.forEach((m,i)=>{
+    const row=document.createElement('div');
+    row.className='rev-mod-item'+(m.on?'':' off');
+    row.innerHTML=`
+      <input type="checkbox" ${m.on?'checked':''} onchange="reviewModules[${i}].on=this.checked;renderRevModules()">
+      <span class="rev-mod-name">${escHtml(m.name)}</span>
+      <span class="rev-mod-btns">
+        <button title="上移" onclick="moveRevModule(${i},-1)">▲</button>
+        <button title="下移" onclick="moveRevModule(${i},1)">▼</button>
+        <button title="删除" onclick="reviewModules.splice(${i},1);renderRevModules()">✕</button>
+      </span>`;
+    box.appendChild(row);
+  });
+}
+function moveRevModule(i,d){
+  const j=i+d; if(j<0||j>=reviewModules.length) return;
+  [reviewModules[i],reviewModules[j]]=[reviewModules[j],reviewModules[i]];
+  renderRevModules();
+}
+function addRevModule(){
+  const inp=document.getElementById('revModInput');
+  const v=inp.value.trim(); if(!v) return;
+  if(reviewModules.length>=12){alert('模块最多 12 个');return;}
+  reviewModules.push({name:v,on:true}); inp.value=''; renderRevModules();
+}
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+/* ── 生成综述（带结构注入） ── */
 async function startReview(){
   if(reviewStreaming){alert('正在生成中，请稍候');return;}
   const docIds     = reviewDocs.size>0 ? [...reviewDocs] : allDocs.filter(d=>d.status==='ready').map(d=>d.doc_id);
@@ -2481,12 +2578,24 @@ async function startReview(){
   const sourceDesc = docIds.length && extraText ? `${docIds.length} 篇文献及附加参考资料`
     : docIds.length ? `${docIds.length} 篇文献`
     : '参考资料';
-  const q = topic
+  // 结构注入：启用的模块 → 强制章节结构
+  const mods = reviewModules.filter(m=>m.on).map(m=>m.name);
+  let structReq = '';
+  if(mods.length){
+    structReq = `\n\n要求：综述必须严格按以下章节结构组织，每个章节以 Markdown 二级标题（## 章节名）开头，标题文字与下列名称完全一致，不要增删章节：\n`
+      + mods.map((m,i)=>`${i+1}. ${m}`).join('\n');
+  }else{
+    structReq = `\n\n要求：每个主要章节以 Markdown 二级标题（## 章节名）开头。`;
+  }
+  const q = (topic
     ? `请基于${sourceDesc}，围绕「${topic}」撰写一篇详细的学术文献综述`
-    : `请基于${sourceDesc}，撰写一篇学术文献综述`;
+    : `请基于${sourceDesc}，撰写一篇学术文献综述`) + structReq;
+
   const resultEl=document.getElementById('reviewResult');
   const statusEl=document.getElementById('reviewStatus');
   reviewStreaming=true;
+  reviewRawText='';
+  document.getElementById('reviewToc').classList.remove('show');
   resultEl.textContent='';
   statusEl.textContent='▌ 正在生成综述…';
   let fullText='';
@@ -2508,18 +2617,52 @@ async function startReview(){
         }catch{}
       }
     }
+    reviewRawText=fullText;
+    renderReviewWithToc(fullText);
     statusEl.textContent=`✦ 生成完成（${fullText.length} 字）`;
     if(currentUser){currentUser.query_count_today=(currentUser.query_count_today||0)+1; updateDspUsage();}
   }catch(err){ statusEl.textContent='❌ 生成失败：'+err.message; }
   finally{ reviewStreaming=false; }
 }
+
+/* ── 生成完成后：渲染标题结构 + 目录 ── */
+function renderReviewWithToc(text){
+  const resultEl=document.getElementById('reviewResult');
+  const tocEl=document.getElementById('reviewToc');
+  const lines=text.split('\n');
+  let html='', toc=[], idx=0;
+  for(const ln of lines){
+    const h2=ln.match(/^##\s+(.+)/), h3=ln.match(/^###\s+(.+)/);
+    if(h3){ const id='rvh-'+(idx++); const t=h3[1].replace(/[#*]/g,'').trim();
+      html+=`<h3 id="${id}">${escHtml(t)}</h3>`; toc.push({id,t,lv:3}); }
+    else if(h2){ const id='rvh-'+(idx++); const t=h2[1].replace(/[#*]/g,'').trim();
+      html+=`<h2 id="${id}">${escHtml(t)}</h2>`; toc.push({id,t,lv:2}); }
+    else if(ln.trim()){ html+=`<p>${escHtml(ln).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')}</p>`; }
+  }
+  resultEl.innerHTML=html||('<p>'+escHtml(text)+'</p>');
+  if(toc.length){
+    tocEl.innerHTML='<div class="review-toc-title">目录</div>'+
+      toc.map(x=>`<a href="javascript:void(0)" class="${x.lv===3?'lv3':''}" data-target="${x.id}"
+        onclick="document.getElementById('${x.id}').scrollIntoView({behavior:'smooth',block:'start'})">${escHtml(x.t)}</a>`).join('');
+    tocEl.classList.add('show');
+    // 滚动高亮
+    resultEl.onscroll=()=>{
+      let cur=null;
+      toc.forEach(x=>{ const el=document.getElementById(x.id);
+        if(el && el.offsetTop-resultEl.scrollTop<=90) cur=x.id; });
+      tocEl.querySelectorAll('a').forEach(a=>a.classList.toggle('active',a.dataset.target===cur));
+    };
+  }
+}
+
+/* ── 复制 / 导出 / 清空（改用原始文本） ── */
 function copyReview(){
-  const t=document.getElementById('reviewResult').textContent.trim();
+  const t=reviewRawText.trim()||document.getElementById('reviewResult').textContent.trim();
   if(!t){alert('尚未生成内容');return;}
   navigator.clipboard.writeText(t).then(()=>alert('已复制到剪贴板'));
 }
 function exportReview(){
-  const t=document.getElementById('reviewResult').textContent.trim();
+  const t=reviewRawText.trim()||document.getElementById('reviewResult').textContent.trim();
   if(!t){alert('尚未生成内容');return;}
   const topic=document.getElementById('reviewTopic').value.trim()||'文献综述';
   const blob=new Blob([t],{type:'text/plain;charset=utf-8'});
@@ -2527,9 +2670,16 @@ function exportReview(){
   a.download=`${topic.slice(0,30)}_综述.txt`; a.click(); URL.revokeObjectURL(a.href);
 }
 function clearReview(){
-  document.getElementById('reviewResult').innerHTML='<div class="review-empty-tip">选中左侧文献后，点击「生成综述」开始自动撰写学术综述文本</div>';
-  document.getElementById('reviewStatus').textContent='';
+  reviewRawText='';
+  document.getElementById('reviewToc').classList.remove('show');
+  document.getElementById('reviewResult').innerHTML='<div class="review-empty-tip">选中左侧文献、设定结构模块后，点击「生成综述」开始自动撰写</div>';
 }
+
+/* 初始化模块列表（放在页面初始化处调用一次；找到你现有的初始化代码
+   如 loadDocs() 调用附近，加一行 renderRevModules(); 也可以直接在
+   本段末尾用下面这行自执行） */
+renderRevModules();
+
 
 // ══════════════════════════════════════════════════════════════
 // Account page

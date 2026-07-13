@@ -1,3 +1,4 @@
+from payment.router import router as pay_router
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -7,7 +8,7 @@ from db.database import init_db, engine
 from routers.upload   import router as upload_router
 from routers.query    import router as query_router
 from routers.auth     import router as auth_router
-from routers.payment  import router as payment_router
+#from routers.payment  import router as payment_router
 from routers.reduce   import router as reduce_router
 from routers.vision   import router as vision_router
 from routers.search   import router as search_router
@@ -53,12 +54,13 @@ _auto_migrate()
 
 # 注册路由
 app.include_router(auth_router)
-app.include_router(payment_router)
+#app.include_router(payment_router)
 app.include_router(upload_router)
 app.include_router(query_router)
 app.include_router(reduce_router)
 app.include_router(vision_router)
 app.include_router(search_router)
+app.include_router(pay_router)
 
 # 静态前端
 frontend_dir = Path(__file__).parent / "frontend"

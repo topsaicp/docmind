@@ -36,3 +36,9 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+# 补充
+*.pem
+*.log
+env.sh
+env.conf

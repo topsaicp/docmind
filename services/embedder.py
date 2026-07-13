@@ -1,16 +1,30 @@
 """
-向量化服务：Jina AI Embedding API + Supabase pgvector
-持久化存储，Railway 重启/重部署后数据不丢失
+向量化服务：硅基流动 BGE-M3 Embedding API + 本机 pgvector
+（由 Jina jina-embeddings-v3/768维 迁移而来，维度变更为 1024）
 """
 import os, re, time
 import requests
 import psycopg2
 import psycopg2.extras
-from config import JINA_API_KEY
 
 DATABASE_URL   = os.getenv("DATABASE_URL", "")
-_JINA_MAX_CHARS = 8000
+
+# ── 硅基流动配置 ─────────────────────────────────────────────────────────
+# 环境变量新增 SILICONFLOW_API_KEY（siliconflow.cn 控制台生成）
+SILICONFLOW_API_KEY = os.getenv("SILICONFLOW_API_KEY", "")
+_EMBED_API_URL   = "https://api.siliconflow.cn/v1/embeddings"
+_EMBED_MODEL     = "BAAI/bge-m3"     # 1024 维，中英双语检索强项
+_EMBED_DIM       = 1024
+_EMBED_MAX_CHARS = 6000              # bge-m3 上限 8192 token，中文按 1字≈1token 留余量
+_EMBED_BATCH     = 16                # 单请求批量条数
+
 _META_PREFIX_RE = re.compile(r'^\[文档:[^\]]*\](?:\[章节:[^\]]*\])?\s*\n?')
+
+def _clean(s):
+    return s.replace('\x00', '') if isinstance(s, str) else s
+
+
+
 _table_ready    = False
 
 
@@ -27,14 +41,12 @@ def _ensure_table():
     conn = _conn()
     try:
         cur = conn.cursor()
-        # pgvector 扩展（Supabase 默认已启用；失败则忽略）
         try:
             cur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
             conn.commit()
         except Exception:
             conn.rollback()
-        # 主表
-        cur.execute("""
+        cur.execute(f"""
             CREATE TABLE IF NOT EXISTS doc_chunks (
                 id               TEXT PRIMARY KEY,
                 doc_id           TEXT NOT NULL,
@@ -45,13 +57,12 @@ def _ensure_table():
                 section          TEXT DEFAULT '',
                 parent_group_id  TEXT DEFAULT '',
                 child_seq        INTEGER DEFAULT 0,
-                embedding        vector(768)
+                embedding        vector({_EMBED_DIM})
             );
         """)
         cur.execute(
             "CREATE INDEX IF NOT EXISTS idx_dc_doc_id ON doc_chunks(doc_id);"
         )
-        # HNSW 向量索引（可选；无索引时自动顺序扫描）
         try:
             cur.execute("""
                 CREATE INDEX IF NOT EXISTS idx_dc_emb
@@ -69,27 +80,37 @@ def _ensure_table():
         conn.close()
 
 
-# ── Jina Embedding ───────────────────────────────────────────────────────
+# ── 硅基流动 Embedding（OpenAI 兼容接口）────────────────────────────────
 def embed_texts(texts: list[str], is_query: bool = False) -> list[list[float]]:
-    task       = "retrieval.query" if is_query else "retrieval.passage"
-    safe_texts = [t[:_JINA_MAX_CHARS] for t in texts]
-    last_err   = None
-    for attempt in range(3):
-        try:
-            resp = requests.post(
-                "https://api.jina.ai/v1/embeddings",
-                headers={"Authorization": f"Bearer {JINA_API_KEY}",
-                         "Content-Type": "application/json"},
-                json={"model": "jina-embeddings-v3", "input": safe_texts,
-                      "task": task, "dimensions": 768},
-                timeout=60,
-            )
-            resp.raise_for_status()
-            return [item["embedding"] for item in resp.json()["data"]]
-        except Exception as e:
-            last_err = e
-            time.sleep(2 ** attempt)
-    raise RuntimeError(f"Jina 向量化失败（已重试3次）: {last_err}")
+    """BGE-M3 检索场景下 query 与 passage 同一编码方式，is_query 参数保留兼容签名。"""
+    safe_texts = [t[:_EMBED_MAX_CHARS] for t in texts]
+    results: list[list[float]] = []
+    # 分批请求，避免单请求过大
+    for i in range(0, len(safe_texts), _EMBED_BATCH):
+        batch    = safe_texts[i:i + _EMBED_BATCH]
+        last_err = None
+        for attempt in range(3):
+            try:
+                resp = requests.post(
+                    _EMBED_API_URL,
+                    headers={"Authorization": f"Bearer {SILICONFLOW_API_KEY}",
+                             "Content-Type": "application/json"},
+                    json={"model": _EMBED_MODEL, "input": batch},
+                    timeout=60,
+                )
+                resp.raise_for_status()
+                data = resp.json()["data"]
+                # 按 index 排序保证顺序与输入一致
+                data.sort(key=lambda x: x["index"])
+                results.extend(item["embedding"] for item in data)
+                last_err = None
+                break
+            except Exception as e:
+                last_err = e
+                time.sleep(2 ** attempt)
+        if last_err is not None:
+            raise RuntimeError(f"硅基流动向量化失败（已重试3次）: {last_err}")
+    return results
 
 
 def _vec(emb: list[float]) -> str:
@@ -114,8 +135,8 @@ def add_chunks(chunks: list[dict], batch_size: int = 16) -> int:
                     VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::vector)
                     ON CONFLICT (id) DO NOTHING
                 """, (
-                    c["id"], c["doc_id"], c["filename"], c["chunk_id"],
-                    c["text"], c.get("lang", "en"), c.get("section", ""),
+                    c["id"], c["doc_id"], _clean(c["filename"]), c["chunk_id"],
+                    _clean(c["text"]), c.get("lang", "en"), _clean(c.get("section", "")),
                     c.get("parent_group_id", ""), c.get("child_seq", 0),
                     _vec(emb),
                 ))
