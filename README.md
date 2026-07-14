@@ -1,4 +1,4 @@
-# DocMind · PDF 知识库问答
+# DocMindAI · PDF 知识库问答
 
 基于 RAG 技术的私有化 PDF 知识库问答系统，支持按章节精读与 AI 智能问答。
 
