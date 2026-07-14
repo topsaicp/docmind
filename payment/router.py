@@ -204,14 +204,17 @@ def create_lead(body: LeadIn, request: Request,
     session.add(lead)
     session.commit()
 
-    # 邮件通知管理员（复用项目已有的邮件服务，失败不影响提交）
+    # 邮件通知管理员（失败不影响提交）
     try:
-        from services.mailer import send_email      # 若函数名不同，改这里
-        send_email(
-            to="topsaitech@163.com",
+        from services.email_sender import send_notify
+        send_notify(
+            to_email="topsaitech@163.com",
             subject="【DocMind】专属尊享版新咨询",
-            html=f"<p>邮箱：{lead.email}</p><p>联系方式：{lead.contact}</p>"
-                 f"<p>需求：{lead.need}</p><p>时间：{lead.created_at}</p>",
+            html=f"<h3>收到一条新的专属尊享版咨询</h3>"
+                 f"<p><b>邮箱：</b>{lead.email}</p>"
+                 f"<p><b>联系方式：</b>{lead.contact or '未填写'}</p>"
+                 f"<p><b>需求描述：</b><br>{(lead.need or '未填写').replace(chr(10), '<br>')}</p>"
+                 f"<p><b>提交时间：</b>{lead.created_at}</p>",
         )
     except Exception as e:
         logger.warning("lead 通知邮件发送失败: %s", e)

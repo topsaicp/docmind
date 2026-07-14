@@ -12,6 +12,7 @@ from config import APP_URL
 _BASE         = APP_URL.rstrip("/")
 _BREVO_KEY    = os.getenv("BREVO_API_KEY", "")
 _SENDER_EMAIL = os.getenv("SENDER_EMAIL", "nufechx@126.com")
+_SUPPORT_MAIL = "topsaitech@163.com"
 
 
 def send_verify_email(to_email: str, token: str) -> bool:
@@ -42,6 +43,36 @@ def send_verify_email(to_email: str, token: str) -> bool:
         return True
     except Exception as e:
         print(f"[email] 发送失败 ({type(e).__name__}): {e}")
+        return False
+
+
+def send_notify(to_email: str, subject: str, html: str) -> bool:
+    """通用通知邮件（尊享版咨询线索、系统通知等）"""
+    if not _BREVO_KEY:
+        print(f"[email-dev] BREVO_API_KEY 未配置，通知未发送：{subject}")
+        return True
+
+    try:
+        resp = requests.post(
+            "https://api.brevo.com/v3/smtp/email",
+            headers={
+                "accept":       "application/json",
+                "api-key":      _BREVO_KEY,
+                "content-type": "application/json",
+            },
+            json={
+                "sender":      {"name": "DocMind", "email": _SENDER_EMAIL},
+                "to":          [{"email": to_email}],
+                "subject":     subject,
+                "htmlContent": html,
+            },
+            timeout=10,
+        )
+        resp.raise_for_status()
+        print(f"[email] 通知发送成功 → {to_email}")
+        return True
+    except Exception as e:
+        print(f"[email] 通知发送失败 ({type(e).__name__}): {e}")
         return False
 
 
@@ -83,7 +114,7 @@ def _verify_html(email: str, verify_url: str) -> str:
         <tr><td style="padding:16px 40px;border-top:1px solid rgba(255,255,255,.06);
                        text-align:center;color:#555;font-size:11px">
           此邮件由 DocMind 系统自动发送，请勿回复。如有问题请联系
-          <a href="mailto:topsai@protonmail.com" style="color:#888">topsai@protonmail.com</a>
+          <a href="mailto:{_SUPPORT_MAIL}" style="color:#888">{_SUPPORT_MAIL}</a>
         </td></tr>
       </table>
     </td></tr>
