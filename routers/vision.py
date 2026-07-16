@@ -69,7 +69,7 @@ def analyze_image_stream(
             resp = client.chat.completions.create(
                 model="glm-4v-flash",
                 messages=messages,
-                max_tokens=2048,
+                max_tokens=1024,
                 stream=True,
             )
             for chunk in resp:

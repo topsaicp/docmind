@@ -574,81 +574,8 @@ input, textarea { font-family: inherit; }
         所有方案均包含核心问答功能，专业版解锁无限文献与优先支持
       </p>
     </div>
-    <div class="pricing-grid">
-      <!-- 免费版 -->
-      <div class="plan-card">
-        <div class="plan-name">免费版</div>
-        <div class="plan-desc">个人研究者起步首选</div>
-        <div class="plan-price"><span class="plan-price-num">免费</span></div>
-        <ul class="plan-features">
-          <li><span class="plan-check">✦</span> 最多 5 篇 PDF 文献</li>
-          <li><span class="plan-check">✦</span> 每日 20 次智能问答</li>
-          <li><span class="plan-check">✦</span> 知识库问答 + 章节精读</li>
-          <li><span class="plan-check">✦</span> 多轮对话上下文记忆</li>
-          <li><span class="plan-check">✦</span> 文献综述生成（最多 3 篇）</li>
-          <li><span class="plan-check">✦</span> 基础论文写作辅助</li>
-          <li><span class="plan-check">✦</span> 引用格式导出（APA/MLA/GB·T）</li>
-        </ul>
-        <a href="/app" class="btn-plan-ghost">免费开始</a>
-      </div>
-      <!-- 基础版 -->
-      <div class="plan-card">
-        <div class="plan-name">基础版</div>
-        <div class="plan-desc">研究生与科研人员首选</div>
-        <div class="plan-price">
-          <span class="plan-price-num">¥9.9</span>
-          <span class="plan-price-period">/月</span>
-        </div>
-        <ul class="plan-features">
-          <li><span class="plan-check">✦</span> 最多 30 篇 PDF 文献</li>
-          <li><span class="plan-check">✦</span> 每日 100 次智能问答</li>
-          <li><span class="plan-check">✦</span> 全部免费版功能</li>
-          <li><span class="plan-check">✦</span> PDF 截图智能分析（图表/公式/表格）</li>
-          <li><span class="plan-check">✦</span> 文献综述（最多 10 篇，更长篇幅）</li>
-          <li><span class="plan-check">✦</span> 学术语言优化（3000 词/次）</li>
-          <li><span class="plan-check">✦</span> 更长回复模式（2× token）</li>
-          <li><span class="plan-check">✦</span> 专属邮件客服</li>
-        </ul>
-        <button class="btn-plan-primary" onclick="goSubscribe('plus')">立即订阅</button>
-      </div>
-      <!-- 专业版 -->
-      <div class="plan-card highlight">
-        <div class="plan-badge">最受欢迎</div>
-        <div class="plan-name">专业版</div>
-        <div class="plan-desc">活跃研究者与高产写作者</div>
-        <div class="plan-price">
-          <span class="plan-price-num">¥19.9</span>
-          <span class="plan-price-period">/月</span>
-        </div>
-        <ul class="plan-features">
-          <li><span class="plan-check">✦</span> 最多 100 篇 PDF 文献</li>
-          <li><span class="plan-check">✦</span> 无限每日问答次数</li>
-          <li><span class="plan-check">✦</span> 全部基础版功能</li>
-          <li><span class="plan-check">✦</span> 学术语言优化（10000 词/次）</li>
-          <li><span class="plan-check">✦</span> 文献综述（最多 20 篇文献）</li>
-          <li><span class="plan-check">✦</span> 超长回复模式（4× token）</li>
-          <li><span class="plan-check">✦</span> 高峰期优先 API 配额</li>
-          <li><span class="plan-check">✦</span> 优先客服支持（24h 响应）</li>
-        </ul>
-        <button class="btn-plan-primary" onclick="goSubscribe('pro')">立即订阅</button>
-      </div>
-
-      <!-- 专属尊享版 -->
-      <div class="plan-card">
-        <div class="plan-name">专属尊享版</div>
-        <div class="plan-desc">冲刺投稿与毕业答辩</div>
-        <div class="plan-price"><span class="plan-price-num" style="font-size:1.5rem">定制报价</span></div>
-        <ul class="plan-features">
-          <li><span class="plan-check">✦</span> 全部专业版功能，额度不设上限</li>
-          <li><span class="plan-check">✦</span> 1v1 学术顾问全程对接</li>
-          <li><span class="plan-check">✦</span> 论文人工精修：语言与逻辑双维度</li>
-          <li><span class="plan-check">✦</span> 投稿护航：期刊建议 + 格式适配</li>
-          <li><span class="plan-check">✦</span> 返修支持：审稿意见解读与回复协助</li>
-          <li><span class="plan-check">✦</span> 工作日 4 小时内优先响应</li>
-        </ul>
-        <button class="btn-plan-primary" onclick="openAdvisor()">联系顾问</button>
-      </div>
-
+    <div class="pricing-grid" id="pricing-grid">
+      <div style="grid-column:1/-1;text-align:center;padding:40px;color:rgba(255,255,255,.3);font-size:.9rem">加载中…</div>
     </div>
     <p style="text-align:center;font-size:.75rem;color:rgba(255,255,255,.28);margin-top:20px">
       支付宝在线支付 · 付款后自动开通
@@ -917,6 +844,93 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(e.target===document.getElementById('legal-modal')) closeLegal();
   });
 });
+
+// ── 动态加载定价 ─────────────────────────────────────────────
+(async function loadPricing(){
+  try {
+    const res = await fetch(`${API}/api/plans`);
+    if (!res.ok) return;
+    const plans = await res.json();
+    const order = ['free','plus','pro','custom'];
+    const grid  = document.getElementById('pricing-grid');
+    if (!grid) return;
+    grid.innerHTML = order.map(key => {
+      const p = plans[key]; if (!p) return '';
+      const isFree   = key === 'free';
+      const isPro    = key === 'pro';
+      const isCustom = key === 'custom';
+      const amt      = parseFloat(p.amount);
+      const priceHtml = isFree
+        ? '<div class="plan-price"><span class="plan-price-num">免费</span></div>'
+        : isCustom
+          ? '<div class="plan-price"><span class="plan-price-num" style="font-size:1.5rem">定制报价</span></div>'
+          : `<div class="plan-price"><span class="plan-price-num">¥${amt}</span><span class="plan-price-period">/月</span></div>`;
+      const features = (p.features||[]).map(f=>`<li><span class="plan-check">✦</span> ${f}</li>`).join('');
+      const badgeHtml = p.badge ? `<div class="plan-badge">${p.badge}</div>` : '';
+      const btn = isFree
+        ? `<a href="/app" class="btn-plan-ghost">免费开始</a>`
+        : isCustom
+          ? `<button class="btn-plan-primary" onclick="openAdvisor()">联系顾问</button>`
+          : `<button class="btn-plan-primary" onclick="goSubscribe('${key}')">立即订阅</button>`;
+      return `<div class="plan-card${isPro?' highlight':''}">
+        ${badgeHtml}
+        <div class="plan-name">${p.name}</div>
+        ${priceHtml}
+        <ul class="plan-features">${features}</ul>
+        ${btn}
+      </div>`;
+    }).join('');
+  } catch(e) { console.warn('定价加载失败', e); }
+})();
+
+// ── 动态加载站点配置（联系方式）────────────────────────────
+(async function loadSiteConfig(){
+  try {
+    const res = await fetch(`${API}/api/site/config`);
+    if (!res.ok) return;
+    const cfg = await res.json();
+    // 更新 pay-modal 联系方式
+    const contactEl = document.querySelector('#pay-modal [style*="也可直接联系"]');
+    if (contactEl && (cfg.wechat || cfg.qq || cfg.support_email)) {
+      const w = cfg.wechat ? `微信 <b style="color:var(--gold)">${cfg.wechat}</b> · ` : '';
+      const q = cfg.qq     ? `QQ <b style="color:var(--gold)">${cfg.qq}</b><br>` : '';
+      const e = cfg.support_email ? `邮箱 <b style="color:var(--gold)">${cfg.support_email}</b>` : '';
+      contactEl.innerHTML = `也可直接联系：<br>${w}${q}${e}`;
+    }
+    // 更新页脚联系邮箱链接
+    if (cfg.support_email) {
+      document.querySelectorAll('a[href^="mailto:"]').forEach(el => {
+        el.href = `mailto:${cfg.support_email}`;
+        if (el.textContent.includes('@')) el.textContent = cfg.support_email;
+      });
+    }
+    // 更新 ICP 备案
+    if (cfg.icp) {
+      const icpEl = document.querySelector('a[href*="beian.miit.gov.cn"]');
+      if (icpEl) { icpEl.textContent = cfg.icp; if(cfg.icp_url) icpEl.href=cfg.icp_url; }
+    }
+    // 公司名称
+    if (cfg.company_name) {
+      const compEl = document.querySelector('.footer-bottom span:first-child');
+      if (compEl) compEl.textContent = `© 2026 ${cfg.company_name} 保留所有权利。`;
+    }
+    // 公告
+    if (cfg.announcement_active && cfg.announcement) {
+      const colors = {info:'#60a5fa',warning:'#fbbf24',success:'#4ade80'};
+      const bg     = {info:'rgba(96,165,250,.08)',warning:'rgba(251,191,36,.08)',success:'rgba(74,222,128,.08)'};
+      const bar = document.createElement('div');
+      bar.style.cssText = `position:fixed;top:0;left:0;right:0;z-index:9999;background:${bg[cfg.announcement_type]||bg.info};border-bottom:1px solid ${colors[cfg.announcement_type]||colors.info}44;padding:8px 40px 8px 20px;text-align:center;font-size:.82rem;color:${colors[cfg.announcement_type]||colors.info}`;
+      // 关闭按钮
+      const closeBtn = document.createElement('span');
+      closeBtn.textContent = '✕';
+      closeBtn.style.cssText = 'position:absolute;right:14px;top:50%;transform:translateY(-50%);cursor:pointer;opacity:.6;font-size:.8rem';
+      closeBtn.onclick = () => bar.remove();
+      bar.appendChild(closeBtn);
+      bar.textContent = cfg.announcement;
+      document.body.insertBefore(bar, document.body.firstChild);
+    }
+  } catch(e) {}
+})();
 
 // ── Init ─────────────────────────────────────────────────────
 (async()=>{

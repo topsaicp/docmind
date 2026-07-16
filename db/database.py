@@ -31,10 +31,12 @@ class User(Base):
     query_count_today = Column(Integer, default=0)
     query_date        = Column(String, nullable=True)       # "2026-06-23"
     is_admin          = Column(Boolean, default=False)
-    email_verified    = Column(Boolean, default=False)
+    email_verified          = Column(Boolean, default=False)
     email_verify_token      = Column(String, nullable=True)
     email_verify_expires_at = Column(DateTime, nullable=True)
-    created_at        = Column(DateTime, default=datetime.utcnow)
+    reset_token             = Column(String, nullable=True)
+    reset_token_expires_at  = Column(DateTime, nullable=True)
+    created_at              = Column(DateTime, default=datetime.utcnow)
 
 
 class Document(Base):
@@ -51,6 +53,14 @@ class Document(Base):
     error_msg     = Column(Text, default="")
     created_at    = Column(DateTime, default=datetime.utcnow)
     updated_at    = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class Settings(Base):
+    """站点配置键值表（JSON value）。"""
+    __tablename__ = "settings"
+    key        = Column(String, primary_key=True)
+    value      = Column(Text, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 def init_db():

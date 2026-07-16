@@ -32,7 +32,7 @@ MODEL_ROUTES: dict[str, tuple[str, str, str]] = {
     "qa":       (DEEPSEEK_API_KEY,  DEEPSEEK_BASE_URL,  "deepseek-v4-flash"),
     "multi":    (DEEPSEEK_API_KEY,  DEEPSEEK_BASE_URL,  "deepseek-v4-flash"),
     "review":   (DEEPSEEK_API_KEY,  DEEPSEEK_BASE_URL,  "deepseek-v4-flash"),
-    "writing":  (GROQ_API_KEY,      GROQ_BASE_URL,      "llama-3.3-70b-versatile"),
+    "writing":  (DEEPSEEK_API_KEY,  DEEPSEEK_BASE_URL,  "deepseek-v4-flash"),
     "cite":     (DEEPSEEK_API_KEY,  DEEPSEEK_BASE_URL,  "deepseek-v4-flash"),
 }
 

@@ -1,7 +1,7 @@
 """
-降率工具接口
-POST /api/reduce         — 文本降率（SSE 流式）
-POST /api/reduce/upload  — 文件上传后降率（SSE 流式）
+语言优化工具接口
+POST /api/reduce         — 文本语言优化（SSE 流式）
+POST /api/reduce/upload  — 文件上传后语言优化（SSE 流式）
 """
 import io, json
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
@@ -59,14 +59,14 @@ def reduce_text(
     require_verified(current_user)
     plan = effective_plan(current_user)
     if plan not in ("plus", "pro", "enterprise"):
-        raise HTTPException(403, "降率工具需要基础版或以上套餐，升级后即可使用")
+        raise HTTPException(403, "语言优化功能需要基础版或以上套餐，升级后即可使用")
     if not req.text.strip():
         raise HTTPException(400, "文本不能为空")
     if req.mode not in ("ai", "dup", "both"):
-        raise HTTPException(400, "无效的降率模式")
-    # 基础版仅支持 AI 率检测，重复率为专业版专属
+        raise HTTPException(400, "无效的语言优化模式")
+    # 基础版仅支持表达优化，深度改写为专业版专属
     if plan == "plus" and req.mode in ("dup", "both"):
-        raise HTTPException(403, "重复率检测为专业版专属功能，升级后可使用完整双检测")
+        raise HTTPException(403, "深度改写为专业版专属功能，升级后可使用完整优化")
     _check_word_limit(req.text, plan)
     return StreamingResponse(_gen(req.text, req.mode), media_type="text/event-stream")
 
@@ -80,9 +80,9 @@ async def reduce_upload(
     require_verified(current_user)
     plan = effective_plan(current_user)
     if plan not in ("plus", "pro", "enterprise"):
-        raise HTTPException(403, "降率工具需要基础版或以上套餐，升级后即可使用")
+        raise HTTPException(403, "语言优化功能需要基础版或以上套餐，升级后即可使用")
     if mode not in ("ai", "dup", "both"):
-        raise HTTPException(400, "无效的降率模式")
+        raise HTTPException(400, "无效的语言优化模式")
 
     name = file.filename or ""
     data = await file.read()
@@ -107,6 +107,6 @@ async def reduce_upload(
     if not text.strip():
         raise HTTPException(400, "文件内容为空")
     if plan == "plus" and mode in ("dup", "both"):
-        raise HTTPException(403, "重复率检测为专业版专属功能，升级后可使用完整双检测")
+        raise HTTPException(403, "深度改写为专业版专属功能，升级后可使用完整优化")
     _check_word_limit(text, plan)
     return StreamingResponse(_gen(text, mode), media_type="text/event-stream")

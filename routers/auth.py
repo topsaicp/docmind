@@ -88,6 +88,13 @@ class ActivateReq(BaseModel):
     days: int  = 30
     admin_secret: str
 
+class ForgotPasswordReq(BaseModel):
+    email: str
+
+class ResetPasswordReq(BaseModel):
+    token: str
+    password: str
+
 
 def _gen_verify_token() -> tuple[str, datetime]:
     """返回 (token, expires_at)"""
@@ -212,6 +219,36 @@ def me(user: User = Depends(get_current_user), session: Session = Depends(get_se
         "query_count_today": db_user.query_count_today,
         "email_verified":    bool(db_user.email_verified),
     }
+
+
+@router.post("/forgot-password")
+def forgot_password(req: ForgotPasswordReq, session: Session = Depends(get_session)):
+    """申请密码重置邮件（无论邮箱是否存在，都返回 200 防止枚举）。"""
+    user = session.query(User).filter_by(email=req.email.lower().strip()).first()
+    if user:
+        token = secrets.token_urlsafe(32)
+        user.reset_token            = token
+        user.reset_token_expires_at = datetime.utcnow() + timedelta(hours=1)
+        session.commit()
+        from services.email_sender import send_reset_email
+        send_reset_email(user.email, token)
+    return {"message": "如果该邮箱已注册，重置链接已发送至邮箱，请检查收件箱（含垃圾邮件）"}
+
+
+@router.post("/reset-password")
+def reset_password(req: ResetPasswordReq, session: Session = Depends(get_session)):
+    user = session.query(User).filter_by(reset_token=req.token).first()
+    if not user or not user.reset_token_expires_at:
+        raise HTTPException(400, "重置链接无效或已过期，请重新申请")
+    if user.reset_token_expires_at < datetime.utcnow():
+        raise HTTPException(400, "重置链接已过期（1小时有效），请重新申请")
+    if len(req.password) < 6:
+        raise HTTPException(400, "密码至少6位")
+    user.password_hash          = hash_password(req.password)
+    user.reset_token            = None
+    user.reset_token_expires_at = None
+    session.commit()
+    return {"message": "密码重置成功，请用新密码登录"}
 
 
 @router.post("/admin/activate")

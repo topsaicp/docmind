@@ -612,6 +612,25 @@ input,textarea{font-family:inherit}
         <span id="auth-switch-hint">没有账号？</span>
         <a id="auth-switch-link" style="color:var(--gold);cursor:pointer" onclick="switchAuthTab('register')">免费注册</a>
       </p>
+      <p id="forgot-link-wrap" style="text-align:center;font-size:.72rem;color:var(--muted);margin-top:4px">
+        <a style="color:var(--muted);cursor:pointer;text-decoration:underline" onclick="switchAuthPanel('forgot')">忘记密码？</a>
+      </p>
+    </div>
+    <!-- 忘记密码面板 -->
+    <div id="auth-forgot-panel" style="display:none;text-align:center;padding:4px 0">
+      <div style="font-size:1.6rem;margin-bottom:10px">🔑</div>
+      <div style="font-size:.95rem;font-weight:600;color:var(--fg);margin-bottom:6px">重置密码</div>
+      <div style="font-size:.76rem;color:var(--muted);line-height:1.7;margin-bottom:14px">
+        输入注册邮箱，我们将发送重置链接（链接1小时有效）
+      </div>
+      <div style="display:flex;flex-direction:column;gap:9px">
+        <input class="auth-input" type="email" id="forgot-email" placeholder="注册邮箱">
+        <div id="forgot-msg" style="display:none;font-size:.76rem;padding:7px 10px;border-radius:6px"></div>
+        <button class="btn-submit" onclick="submitForgotPassword()">发送重置邮件</button>
+      </div>
+      <p style="font-size:.72rem;color:var(--muted);margin-top:12px">
+        <a style="color:var(--gold);cursor:pointer" onclick="switchAuthPanel('form')">← 返回登录</a>
+      </p>
     </div>
     <!-- 注册后：等待邮箱验证面板 -->
     <div id="auth-verify-panel" style="display:none;text-align:center;padding:10px 0">
@@ -641,74 +660,8 @@ input,textarea{font-family:inherit}
       <div style="font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:700;color:var(--fg);margin-bottom:6px">选择套餐</div>
       <div style="font-size:.82rem;color:var(--muted)">支付宝在线支付，付款后即时开通</div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px">
-
-      <!-- 免费版 -->
-      <div style="border:1px solid var(--border);border-radius:10px;padding:18px 16px">
-        <div style="font-size:.72rem;letter-spacing:.08em;color:var(--muted);margin-bottom:6px">免费版</div>
-        <div style="font-size:1.6rem;font-weight:700;color:var(--fg);margin-bottom:14px">免费</div>
-        <ul style="list-style:none;font-size:.78rem;color:var(--fg2);line-height:2.0">
-          <li><span style="color:var(--gold)">✦</span> 5 篇 PDF 文献</li>
-          <li><span style="color:var(--gold)">✦</span> 每日 20 次智能问答</li>
-          <li><span style="color:var(--gold)">✦</span> 知识库问答 + 章节精读</li>
-          <li><span style="color:var(--gold)">✦</span> 多轮对话上下文记忆</li>
-          <li><span style="color:var(--gold)">✦</span> 文献综述（最多 3 篇）</li>
-          <li><span style="color:var(--gold)">✦</span> 引用格式导出</li>
-        </ul>
-        <div id="planBadgeFree" style="margin-top:14px;padding:7px;background:var(--bg2);border-radius:6px;font-size:.73rem;color:var(--muted);text-align:center">基础功能</div>
-      </div>
-
-      <!-- 基础版 -->
-      <div style="border:1px solid rgba(94,89,76,0.4);border-radius:10px;padding:18px 16px">
-        <div style="font-size:.72rem;letter-spacing:.08em;color:var(--gold);margin-bottom:6px">基础版</div>
-        <div style="font-size:1.6rem;font-weight:700;color:var(--fg);margin-bottom:14px">¥9.9<span style="font-size:.75rem;font-weight:400;color:var(--muted)">/月</span></div>
-        <ul style="list-style:none;font-size:.78rem;color:var(--fg2);line-height:2.0">
-          <li><span style="color:var(--gold)">✦</span> 30 篇 PDF 文献</li>
-          <li><span style="color:var(--gold)">✦</span> 每日 100 次智能问答</li>
-          <li><span style="color:var(--gold)">✦</span> 全部免费版功能</li>
-          <li><span style="color:var(--gold)">✦</span> PDF 截图智能分析</li>
-          <li><span style="color:var(--gold)">✦</span> 文献综述（最多 10 篇）</li>
-          <li><span style="color:var(--gold)">✦</span> 学术语言优化（3000 词/次）</li>
-          <li><span style="color:var(--gold)">✦</span> 更长回复模式（2× token）</li>
-        </ul>
-        <button class="abtn abtn-gold" style="width:100%;margin-top:14px;justify-content:center"
-          onclick="subscribe('plus')">立即订阅</button>
-      </div>
-
-      <!-- 专业版 -->
-      <div style="border:2px solid var(--gold);border-radius:10px;padding:18px 16px;position:relative">
-        <div style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:var(--gold);color:#0f0f1a;font-size:.68rem;font-weight:700;letter-spacing:.08em;padding:2px 10px;border-radius:20px">最受欢迎</div>
-        <div style="font-size:.72rem;letter-spacing:.08em;color:var(--gold);margin-bottom:6px">专业版</div>
-        <div style="font-size:1.6rem;font-weight:700;color:var(--fg);margin-bottom:14px">¥19.9<span style="font-size:.75rem;font-weight:400;color:var(--muted)">/月</span></div>
-        <ul style="list-style:none;font-size:.78rem;color:var(--fg2);line-height:2.0">
-          <li><span style="color:var(--gold)">✦</span> 100 篇 PDF 文献</li>
-          <li><span style="color:var(--gold)">✦</span> 无限每日问答次数</li>
-          <li><span style="color:var(--gold)">✦</span> 全部基础版功能</li>
-          <li><span style="color:var(--gold)">✦</span> 学术语言优化（10000 词/次）</li>
-          <li><span style="color:var(--gold)">✦</span> 文献综述（最多 20 篇）</li>
-          <li><span style="color:var(--gold)">✦</span> 超长回复模式（4× token）</li>
-          <li><span style="color:var(--gold)">✦</span> 优先客服（24h 响应）</li>
-        </ul>
-        <button class="abtn abtn-gold" style="width:100%;margin-top:14px;justify-content:center"
-          onclick="subscribe('pro')">立即订阅</button>
-      </div>
-
-      <!-- 专属尊享版 -->
-      <div style="border:1px solid rgba(201,168,76,.55);border-radius:10px;padding:18px 16px;background:rgba(201,168,76,.04)">
-        <div style="font-size:.72rem;letter-spacing:.08em;color:var(--gold);margin-bottom:6px">专属尊享版</div>
-        <div style="font-size:1.35rem;font-weight:700;color:var(--fg);margin-bottom:14px">定制报价</div>
-        <ul style="list-style:none;font-size:.78rem;color:var(--fg2);line-height:2.0">
-          <li><span style="color:var(--gold)">✦</span> 全部专业版功能，额度不设上限</li>
-          <li><span style="color:var(--gold)">✦</span> 1v1 学术顾问全程对接</li>
-          <li><span style="color:var(--gold)">✦</span> 论文人工精修：语言与逻辑</li>
-          <li><span style="color:var(--gold)">✦</span> 投稿护航：期刊建议 + 格式适配</li>
-          <li><span style="color:var(--gold)">✦</span> 返修支持：审稿意见解读与回复</li>
-          <li><span style="color:var(--gold)">✦</span> 工作日 4 小时优先响应</li>
-        </ul>
-        <button class="abtn abtn-gold" style="width:100%;margin-top:14px;justify-content:center"
-          onclick="openLeadModal()">联系顾问获取方案</button>
-      </div>
-
+    <div id="pricing-cards-container" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px">
+      <div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--muted);font-size:.85rem">加载中…</div>
     </div>
     <div style="margin-top:22px;padding-top:16px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <span style="font-size:.75rem;color:var(--muted)">已有激活码？</span>
@@ -1059,7 +1012,7 @@ input,textarea{font-family:inherit}
       </div>
     </div>
 
-    <!-- ─── Page: 降率工具 ─── -->
+    <!-- ─── Page: 语言优化 ─── -->
     <div class="page" id="page-reduce">
       <div class="page-header">
         <span class="page-title">✂️ 语言优化</span>
@@ -1072,20 +1025,20 @@ input,textarea{font-family:inherit}
         <div class="reduce-panel">
           <div class="reduce-modes">
             <button class="reduce-mode-btn active" id="rmode-ai" onclick="setReduceMode('ai')">
-              <div class="rmode-title">✂️ 降 AI 率<span class="rmode-tag">~2min/千词</span></div>
-              <div class="rmode-desc">AI率超20%、重复率上升全额退</div>
+              <div class="rmode-title">🖋 表达优化<span class="rmode-tag">~2min/千词</span></div>
+              <div class="rmode-desc">提升语言自然度与学术语气</div>
             </button>
             <button class="reduce-mode-btn" id="rmode-dup" onclick="setReduceMode('dup')">
-              <div class="rmode-title">📋 降重复率<span class="rmode-tag">~2min/千词</span></div>
-              <div class="rmode-desc">重复率超15%、AI率上升全额退</div>
+              <div class="rmode-title">📝 深度改写<span class="rmode-tag">~2min/千词</span></div>
+              <div class="rmode-desc">从用词到句式全面重写，表达更原创</div>
             </button>
             <button class="reduce-mode-btn" id="rmode-both" onclick="setReduceMode('both')">
-              <div class="rmode-title">⚡ AI+重复率双降<span class="rmode-tag">~3min/千词</span></div>
-              <div class="rmode-desc">AI率超20%、重复率超15%全额退</div>
+              <div class="rmode-title">⚡ 综合优化<span class="rmode-tag">~3min/千词</span></div>
+              <div class="rmode-desc">表达优化 + 深度改写双重处理</div>
             </button>
             <button class="reduce-mode-btn mode-manual" id="rmode-manual" onclick="setReduceMode('manual')">
-              <div class="rmode-title">👤 人工服务<span class="rmode-tag">24h</span></div>
-              <div class="rmode-desc">专业团队人工改写，AI率超10%包退</div>
+              <div class="rmode-title">👤 人工润色服务<span class="rmode-tag">24h</span></div>
+              <div class="rmode-desc">专业学术编辑团队人工改写</div>
             </button>
           </div>
           <!-- Auto processing input (hidden in manual mode) -->
@@ -1112,13 +1065,11 @@ input,textarea{font-family:inherit}
           <!-- Manual service info (shown in manual mode) -->
           <div class="reduce-manual-box" id="reduceManualBox" style="display:none">
             <div class="rmanual-card">
-              <div class="rmanual-title">👤 专业人工降AI率服务</div>
+              <div class="rmanual-title">👤 专业人工润色服务</div>
               <ul class="rmanual-list">
-                <li>AI率超10%、重复率上升全额退款</li>
                 <li>专业学术编辑团队逐句人工改写</li>
-                <li>赠送 Turnitin 官方检测报告</li>
+                <li>提升语言地道性、学术语气与表达清晰度</li>
                 <li>24小时内交付，修改到满意为止</li>
-                <li>含官方报告，适配 3.25 严苛版</li>
               </ul>
             </div>
             <div class="rmanual-contact">
@@ -1331,9 +1282,38 @@ function switchAuthTab(mode){
   document.getElementById('auth-error').style.display='none';
 }
 function switchAuthPanel(panel){
-  // 用 'block'/'none' 确保不受 CSS 层叠干扰
-  document.getElementById('auth-form-panel').style.display   = panel==='form'   ? 'block' : 'none';
-  document.getElementById('auth-verify-panel').style.display = panel==='verify' ? 'block' : 'none';
+  document.getElementById('auth-form-panel').style.display    = panel==='form'   ? 'block' : 'none';
+  document.getElementById('auth-verify-panel').style.display  = panel==='verify' ? 'block' : 'none';
+  document.getElementById('auth-forgot-panel').style.display  = panel==='forgot' ? 'block' : 'none';
+  // 忘记密码链接只在登录态显示
+  const fw = document.getElementById('forgot-link-wrap');
+  if (fw) fw.style.display = (panel==='form' && authMode==='login') ? 'block' : 'none';
+}
+
+async function submitForgotPassword(){
+  const email = document.getElementById('forgot-email').value.trim();
+  const msg   = document.getElementById('forgot-msg');
+  if (!email.includes('@')) { showForgotMsg('请输入有效邮箱', 'error'); return; }
+  try {
+    const res = await fetch(`${API}/api/auth/forgot-password`, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email}),
+    });
+    const d = await res.json();
+    showForgotMsg(d.message || '已发送', 'ok');
+  } catch(e) {
+    showForgotMsg('网络错误：'+e.message, 'error');
+  }
+}
+
+function showForgotMsg(text, type){
+  const el = document.getElementById('forgot-msg');
+  el.textContent = text;
+  el.style.display = 'block';
+  el.style.background = type==='error' ? 'rgba(248,113,113,.08)' : 'rgba(74,222,128,.08)';
+  el.style.color = type==='error' ? '#f87171' : '#4ade80';
+  el.style.border = type==='error' ? '1px solid rgba(248,113,113,.2)' : '1px solid rgba(74,222,128,.2)';
+  el.style.borderRadius = '6px';
+  el.style.padding = '7px 10px';
 }
 
 function _showVerifyPanel(email){
@@ -1568,7 +1548,7 @@ function updatePlanBadges(){
   // 综述页套餐标识
   const rb = document.getElementById('revPlanBadge');
   if(rb) rb.textContent = `${label} · 最多 ${lim.reviewMaxDocs} 篇`;
-  // 降率页字数上限
+  // 语言优化页字数上限
   const rlb = document.getElementById('reduceLimitBadge');
   if(rlb) rlb.textContent = `${label} · ${lim.reduceMaxWords.toLocaleString()} 词/次`;
 }
@@ -2881,9 +2861,11 @@ function clearRefList(){
 }
 
 // ── Pricing modal ──
-function openPricingModal(){
+let _plansLoaded = false;
+async function openPricingModal(){
   const m=document.getElementById('pricing-modal');
   m.style.display='flex';
+  if (!_plansLoaded) await loadAndRenderPricingCards();
 }
 function closePricingModal(){
   document.getElementById('pricing-modal').style.display='none';
@@ -2891,6 +2873,47 @@ function closePricingModal(){
 document.getElementById('pricing-modal').addEventListener('click',e=>{
   if(e.target===document.getElementById('pricing-modal')) closePricingModal();
 });
+
+async function loadAndRenderPricingCards(){
+  try {
+    const res = await fetch(`${API}/api/plans`);
+    if (!res.ok) return;
+    const plans = await res.json();
+    const order = ['free','plus','pro','custom'];
+    const container = document.getElementById('pricing-cards-container');
+    container.innerHTML = order.map(key => {
+      const p = plans[key]; if (!p) return '';
+      const isPro = key==='pro';
+      const isFree = key==='free';
+      const isCustom = key==='custom';
+      const amountNum = parseFloat(p.amount);
+      const priceHtml = isFree
+        ? '<div style="font-size:1.6rem;font-weight:700;color:var(--fg);margin-bottom:14px">免费</div>'
+        : isCustom
+          ? '<div style="font-size:1.35rem;font-weight:700;color:var(--fg);margin-bottom:14px">定制报价</div>'
+          : `<div style="font-size:1.6rem;font-weight:700;color:var(--fg);margin-bottom:14px">¥${amountNum}<span style="font-size:.75rem;font-weight:400;color:var(--muted)">/月</span></div>`;
+      const features = (p.features||[]).map(f=>`<li><span style="color:var(--gold)">✦</span> ${f}</li>`).join('');
+      const badgeHtml = p.badge ? `<div style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:var(--gold);color:#0f0f1a;font-size:.68rem;font-weight:700;letter-spacing:.08em;padding:2px 10px;border-radius:20px">${p.badge}</div>` : '';
+      const btnHtml = isFree
+        ? `<div id="planBadgeFree" style="margin-top:14px;padding:7px;background:rgba(255,255,255,.05);border-radius:6px;font-size:.73rem;color:var(--muted);text-align:center">当前套餐</div>`
+        : isCustom
+          ? `<button class="abtn abtn-gold" style="width:100%;margin-top:14px;justify-content:center" onclick="openLeadModal()">联系顾问获取方案</button>`
+          : `<button class="abtn abtn-gold" style="width:100%;margin-top:14px;justify-content:center" onclick="subscribe('${key}')">立即订阅</button>`;
+      const border = isPro ? 'border:2px solid var(--gold)' : (isCustom ? 'border:1px solid rgba(201,168,76,.55);background:rgba(201,168,76,.04)' : 'border:1px solid var(--border)');
+      return `<div style="${border};border-radius:10px;padding:18px 16px;position:relative">
+        ${badgeHtml}
+        <div style="font-size:.72rem;letter-spacing:.08em;color:${isFree?'var(--muted)':'var(--gold)'};margin-bottom:6px">${p.name}</div>
+        ${priceHtml}
+        <ul style="list-style:none;font-size:.78rem;color:var(--fg2);line-height:2.0">${features}</ul>
+        ${btnHtml}
+      </div>`;
+    }).join('');
+    _plansLoaded = true;
+    updatePlanBadges();
+  } catch(e) {
+    console.warn('定价加载失败:', e);
+  }
+}
 
 function renderCiteModal(){
   const meta=citeCurrentMeta;
@@ -3204,7 +3227,7 @@ function exportPaper(){
 }
 
 // ══════════════════════════════════════════════════════════════
-// 降率工具 (Reduce)
+// 语言优化 (Reduce)
 // ══════════════════════════════════════════════════════════════
 let reduceMode   = 'ai';
 let isReducing   = false;
@@ -3363,7 +3386,7 @@ function exportReduceResult(){
   const blob = new Blob([t], {type:'text/plain;charset=utf-8'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `DocMind_降率结果_${new Date().toLocaleDateString('zh-CN').replace(/\//g,'-')}.txt`;
+  a.download = `DocMind_语言优化结果_${new Date().toLocaleDateString('zh-CN').replace(/\//g,'-')}.txt`;
   a.click(); URL.revokeObjectURL(a.href);
 }
 
@@ -3484,9 +3507,18 @@ initWriteSections();
 checkAuth();
 checkPendingOrder();
 setInterval(()=>{ if(currentUser) loadDocuments(); },12000);
-// 从落地页点"立即订阅"跳来时，登录后自动弹定价弹窗
+
+// ── 密码重置 token 检测 ─────────────────────────────────────
 (function(){
   const p = new URLSearchParams(location.search);
+  const resetToken = p.get('reset_token');
+  if (resetToken) {
+    // 清除 URL 参数，避免刷新重复触发
+    history.replaceState({}, '', '/app');
+    showResetPasswordModal(resetToken);
+    return;
+  }
+  // 从落地页点"立即订阅"跳来时，登录后自动弹定价弹窗
   const plan = p.get('subscribe');
   if(plan && (plan==='plus'||plan==='pro')){
     const t = setInterval(()=>{
@@ -3498,6 +3530,71 @@ setInterval(()=>{ if(currentUser) loadDocuments(); },12000);
     setTimeout(()=>clearInterval(t), 8000);
   }
 })();
+
+function showResetPasswordModal(token){
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:700;display:flex;align-items:center;justify-content:center;padding:16px';
+  overlay.innerHTML = `
+    <div style="background:var(--card);border:1px solid var(--border-gold);border-radius:14px;padding:28px 24px;width:100%;max-width:380px">
+      <div style="text-align:center;margin-bottom:20px">
+        <div style="font-size:1.8rem;margin-bottom:8px">🔑</div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700">设置新密码</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:9px">
+        <input class="auth-input" type="password" id="reset-pw1" placeholder="新密码（至少6位）">
+        <input class="auth-input" type="password" id="reset-pw2" placeholder="确认新密码">
+        <div id="reset-msg" style="display:none;font-size:.76rem;padding:7px 10px;border-radius:6px"></div>
+        <button class="btn-submit" onclick="submitResetPassword('${token}',this.closest('div[style]').parentElement)">确认重置</button>
+      </div>
+      <p style="text-align:center;font-size:.73rem;color:var(--muted);margin-top:12px">
+        设置完成后将跳转到登录页
+      </p>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+async function submitResetPassword(token, overlay){
+  const pw1 = document.getElementById('reset-pw1').value;
+  const pw2 = document.getElementById('reset-pw2').value;
+  const msg = document.getElementById('reset-msg');
+  if (pw1.length < 6) { showResetMsg(msg, '密码至少6位', 'error'); return; }
+  if (pw1 !== pw2)    { showResetMsg(msg, '两次输入密码不一致', 'error'); return; }
+  try {
+    const res = await fetch(`${API}/api/auth/reset-password`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({token, password: pw1}),
+    });
+    const d = await res.json();
+    if (!res.ok) { showResetMsg(msg, d.detail||'重置失败', 'error'); return; }
+    showResetMsg(msg, '密码重置成功！请重新登录', 'ok');
+    setTimeout(() => {
+      overlay.remove();
+      openAuth('login');
+    }, 1800);
+  } catch(e) {
+    showResetMsg(msg, '网络错误：'+e.message, 'error');
+  }
+}
+
+function showResetMsg(el, text, type){
+  el.textContent = text;
+  el.style.display = 'block';
+  el.style.background = type==='error' ? 'rgba(248,113,113,.08)' : 'rgba(74,222,128,.08)';
+  el.style.color = type==='error' ? '#f87171' : '#4ade80';
+  el.style.border = type==='error' ? '1px solid rgba(248,113,113,.2)' : '1px solid rgba(74,222,128,.2)';
+}
+
+// 加载站点配置（更新咨询弹窗联系方式）
+fetch(`${API}/api/site/config`).then(r=>r.json()).then(cfg=>{
+  if(!cfg) return;
+  const contact = document.querySelector('#lead-modal [style*="也可直接联系"]');
+  if(contact && (cfg.wechat || cfg.qq || cfg.support_email)){
+    const w = cfg.wechat ? `微信 <b style="color:var(--gold)">${cfg.wechat}</b> · ` : '';
+    const q = cfg.qq     ? `QQ <b style="color:var(--gold)">${cfg.qq}</b><br>` : '';
+    const e = cfg.support_email ? `邮箱 <b style="color:var(--gold)">${cfg.support_email}</b>` : '';
+    contact.innerHTML = `也可直接联系：<br>${w}${q}${e}`;
+  }
+}).catch(()=>{});
 
 </script>
 </body>
