@@ -21,7 +21,7 @@ from pydantic import BaseModel
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
-from db.database import get_session, User, Document
+from db.database import get_session, User, Document, SiteVisit
 from payment.models import PayOrder, ActivationCode, Lead
 from payment.service import activate, gen_order_no, PLAN_NAMES
 from routers.auth import get_current_user, hash_password
@@ -58,6 +58,12 @@ def admin_stats(db: Session = Depends(get_session), _: User = Depends(require_ad
         func.date(PayOrder.paid_at) == today,
         PayOrder.status == "paid",
     ).scalar() or 0
+    visits_today = db.query(func.count(SiteVisit.id)).filter(
+        func.date(SiteVisit.created_at) == today,
+    ).scalar() or 0
+    visitors_today = db.query(func.count(func.distinct(SiteVisit.ip))).filter(
+        func.date(SiteVisit.created_at) == today,
+    ).scalar() or 0
 
     recent_orders = (
         db.query(PayOrder)
@@ -84,6 +90,8 @@ def admin_stats(db: Session = Depends(get_session), _: User = Depends(require_ad
         "paid_users":     paid_users,
         "orders_today":   orders_today,
         "revenue_today":  float(revenue_today),
+        "visits_today":   visits_today,
+        "visitors_today": visitors_today,
         "recent_orders":  orders_list,
     }
 

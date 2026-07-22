@@ -1,10 +1,10 @@
 from payment.router import router as pay_router
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pathlib import Path
 
-from db.database import init_db, engine
+from db.database import init_db, engine, Session as DBSession, SiteVisit
 from routers.upload   import router as upload_router
 from routers.query    import router as query_router
 from routers.auth     import router as auth_router
@@ -72,12 +72,26 @@ app.include_router(write_outline_router)
 frontend_dir = Path(__file__).parent / "frontend"
 app.mount("/static", StaticFiles(directory=str(frontend_dir)), name="static")
 
+def _log_visit(path: str, request: Request):
+    try:
+        db = DBSession()
+        try:
+            ip = request.client.host if request.client else None
+            db.add(SiteVisit(path=path, ip=ip))
+            db.commit()
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"[visit-track] error: {e}")
+
 @app.get("/")
-def root():
+def root(request: Request):
+    _log_visit("/", request)
     return FileResponse(str(frontend_dir / "index.html"))
 
 @app.get("/app")
-def app_page():
+def app_page(request: Request):
+    _log_visit("/app", request)
     return FileResponse(str(frontend_dir / "app.html"))
 
 @app.get("/admin")

@@ -200,6 +200,8 @@ select option{background:#1a1a28}
     <div class="stat-card"><div class="label">付费用户</div><div class="value gold" id="s-paid">-</div></div>
     <div class="stat-card"><div class="label">今日订单</div><div class="value" id="s-orders">-</div></div>
     <div class="stat-card"><div class="label">今日收入</div><div class="value gold" id="s-revenue">-</div></div>
+    <div class="stat-card"><div class="label">今日访问量</div><div class="value" id="s-visits">-</div></div>
+    <div class="stat-card"><div class="label">今日访客数</div><div class="value green" id="s-visitors">-</div></div>
   </div>
   <div class="card">
     <div class="card-head"><span class="card-title">最近付款订单</span></div>
@@ -561,6 +563,8 @@ async function loadStats() {
   document.getElementById('s-paid').textContent    = d.paid_users;
   document.getElementById('s-orders').textContent  = d.orders_today;
   document.getElementById('s-revenue').textContent = '¥' + d.revenue_today.toFixed(2);
+  document.getElementById('s-visits').textContent    = d.visits_today;
+  document.getElementById('s-visitors').textContent  = d.visitors_today;
 
   const tbody = document.getElementById('recent-orders-tbody');
   tbody.innerHTML = d.recent_orders.map(o => `

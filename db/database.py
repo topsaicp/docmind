@@ -55,6 +55,15 @@ class Document(Base):
     updated_at    = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class SiteVisit(Base):
+    """页面访问记录，用于仪表盘的访问量统计。"""
+    __tablename__ = "site_visits"
+    id         = Column(Integer, primary_key=True, autoincrement=True)
+    path       = Column(String, nullable=False)
+    ip         = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
 class Settings(Base):
     """站点配置键值表（JSON value）。"""
     __tablename__ = "settings"
