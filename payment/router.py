@@ -22,9 +22,10 @@ from sqlalchemy.orm import Session
 
 from db.database import get_session, User
 from routers.auth import get_current_user
+from services import settings_service
 from . import alipay_client
 from .models import PayOrder, Lead
-from .service import (PLANS, PLAN_NAMES, PayError, activate, gen_codes,
+from .service import (PLAN_NAMES, PayError, activate, gen_codes,
                       gen_order_no, membership_info, redeem_code)
 
 logger = logging.getLogger("payment")
@@ -49,7 +50,9 @@ def create_order(body: CreateOrderIn,
                  user: User = Depends(get_current_user)):
     if not user.email_verified:
         raise HTTPException(403, "请先验证邮箱后再订阅")
-    cfg = PLANS.get(body.plan)
+    if body.plan not in ("plus", "pro"):
+        raise HTTPException(400, "该套餐不支持在线订阅")
+    cfg = settings_service.get_plans().get(body.plan)
     if not cfg:
         raise HTTPException(400, "该套餐不支持在线订阅")
 
@@ -65,7 +68,7 @@ def create_order(body: CreateOrderIn,
         url = alipay_client.pay_url(
             order_no=order.order_no,
             amount=cfg["amount"],
-            subject=f"DocMind {cfg['name']} {cfg['days']}天",
+            subject=f"慧策智写 {cfg['name']} {cfg['days']}天",
             mobile=body.mobile,
         )
     except Exception as e:

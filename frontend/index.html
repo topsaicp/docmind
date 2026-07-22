@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DocMind · AI 学术研究助手</title>
+<title>慧策智写 · AI 学术研究助手</title>
 <meta name="description" content="上传PDF，构建私人知识库。支持多文献问答、PDF精读对话、截图分析、文献综述、论文撰写与学术语言优化。">
+<link rel="icon" type="image/png" href="/static/assets/logo-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Noto+Sans+SC:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -55,8 +56,9 @@ input, textarea { font-family: inherit; }
   height: 60px; display: flex; align-items: center; justify-content: space-between;
 }
 .brand { display: flex; align-items: center; gap: 10px; }
-.brand-icon { width: 28px; height: 28px; background: var(--gold); border-radius: 5px;
-              display: flex; align-items: center; justify-content: center; font-size: 14px; }
+.brand-icon { width: 28px; height: 28px; border-radius: 50%; overflow: hidden;
+              display: flex; align-items: center; justify-content: center; }
+.brand-icon img { width: 100%; height: 100%; object-fit: contain; }
 .brand-name { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 700; color: var(--fg); }
 .nav-links { display: flex; align-items: center; gap: 32px; }
 .nav-links a { font-size: .85rem; color: var(--muted); transition: color .2s; }
@@ -144,6 +146,16 @@ input, textarea { font-family: inherit; }
             color: var(--gold); margin-bottom: 18px; }
 .step-title { font-size: 1rem; font-weight: 600; color: var(--fg); margin-bottom: 10px; }
 .step-desc  { font-size: .85rem; color: var(--muted); line-height: 1.75; }
+
+/* ── Highlights (四大亮点) ──────────────────────────────────── */
+#highlights { padding: 70px 24px 20px; }
+.highlight-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 20px; margin-top: 40px; }
+.highlight-card { background: var(--card); border: 1px solid var(--border-gold); border-radius: 10px;
+             padding: 26px 22px; text-align: center; transition: transform .2s,border-color .25s; }
+.highlight-card:hover { transform: translateY(-3px); border-color: var(--gold); }
+.highlight-icon { font-size: 1.8rem; margin-bottom: 14px; }
+.highlight-title { font-size: .95rem; font-weight: 700; color: var(--fg); margin-bottom: 8px; }
+.highlight-desc { font-size: .8rem; color: var(--muted); line-height: 1.7; }
 
 /* ── Features ───────────────────────────────────────────────── */
 #features { padding: 80px 24px; border-top: 1px solid var(--border); }
@@ -401,6 +413,10 @@ input, textarea { font-family: inherit; }
   .footer-grid { grid-template-columns: 1fr 1fr; }
   .mockup-left { display: none; }
   .stats-grid { grid-template-columns: 1fr; }
+  .highlight-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 560px) {
+  .highlight-grid { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -410,8 +426,8 @@ input, textarea { font-family: inherit; }
 <nav id="navbar">
   <div class="nav-inner">
     <div class="brand">
-      <div class="brand-icon">📚</div>
-      <span class="brand-name">DocMind</span>
+      <div class="brand-icon"><img src="/static/assets/logo-icon.png" alt="慧策智写"></div>
+      <span class="brand-name">慧策智写</span>
     </div>
     <div class="nav-links">
       <a href="#how">使用方法</a>
@@ -433,12 +449,12 @@ input, textarea { font-family: inherit; }
   <div class="wrap" style="position:relative">
     <div class="hero-badge">
       <span class="hero-badge-dot"></span>
-      基于 RAG 技术 · DeepSeek · Qwen-VL 视觉分析
+      AI 驱动 · 私有知识库 · 100+ 篇文献同库检索
     </div>
-    <h1 class="hero-h1">让 PDF 文献<br><span class="accent">开口说话</span></h1>
+    <h1 class="hero-h1">让 100+ 篇文献<br><span class="accent">撑起你的整篇论文</span></h1>
     <p class="hero-sub">
-      上传学术论文或任意 PDF，构建私人知识库。支持多文献问答、PDF 精读对话、
-      图表截图分析、文献综述生成、论文撰写辅助与学术语言优化。
+      构建专属知识库，AI 辅助从目录规划到逐章写作，参考文献真实可查，
+      每一步都可编辑、可调整。
     </p>
     <div class="hero-btns">
       <a href="/app" class="btn-hero-primary" id="heroPrimaryBtn">立即上传文献 →</a>
@@ -449,7 +465,7 @@ input, textarea { font-family: inherit; }
         <span class="mockup-dot" style="background:#ff5f57"></span>
         <span class="mockup-dot" style="background:#febc2e"></span>
         <span class="mockup-dot" style="background:#28c840"></span>
-        <span class="mockup-title">DocMind · 知识库问答工作台</span>
+        <span class="mockup-title">慧策智写 · 知识库问答工作台</span>
       </div>
       <div class="mockup-body">
         <div class="mockup-left">
@@ -486,10 +502,38 @@ input, textarea { font-family: inherit; }
   </div>
 </section>
 
+<!-- ═══ HIGHLIGHTS ═══════════════════════════════════════════════ -->
+<section id="highlights">
+  <div class="wrap-md">
+    <div class="highlight-grid">
+      <div class="highlight-card">
+        <div class="highlight-icon">🗂</div>
+        <div class="highlight-title">大容量知识库</div>
+        <div class="highlight-desc">单库支持 100+ 篇 PDF 文献同时管理与检索，学术研究不再东拼西凑</div>
+      </div>
+      <div class="highlight-card">
+        <div class="highlight-icon">🖋</div>
+        <div class="highlight-title">论文智能写作</div>
+        <div class="highlight-desc">基于你自己的知识库，从目录规划到逐章撰写全流程 AI 辅助</div>
+      </div>
+      <div class="highlight-card">
+        <div class="highlight-icon">📑</div>
+        <div class="highlight-title">参考文献真实可查</div>
+        <div class="highlight-desc">引用信息直接提取自你上传的文献原文，不由 AI 编造</div>
+      </div>
+      <div class="highlight-card">
+        <div class="highlight-icon">🖱</div>
+        <div class="highlight-title">所见即所得的协作</div>
+        <div class="highlight-desc">目录、章节、内容全程可编辑调整，AI 生成过程不是黑盒</div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ═══ STATS ══════════════════════════════════════════════════ -->
 <section id="stats-strip">
   <div class="stats-grid">
-    <div><div class="stat-num">6+</div><div class="stat-label">核心学术功能模块</div></div>
+    <div><div class="stat-num">100+</div><div class="stat-label">篇文献同库管理</div></div>
     <div><div class="stat-num">&lt; 3s</div><div class="stat-label">平均问答响应时间</div></div>
     <div><div class="stat-num">10+</div><div class="stat-label">支持引用格式种类</div></div>
   </div>
@@ -506,17 +550,17 @@ input, textarea { font-family: inherit; }
       <div class="step-card">
         <div class="step-num">1</div>
         <div class="step-title">上传 PDF 文献</div>
-        <div class="step-desc">支持英文、中文学术论文及任意文字型 PDF。系统自动检测语言，英文论文用 PyMuPDF 精准解析章节结构，中文文档用 MarkItDown 提取全文，自动去除参考文献噪音。</div>
+        <div class="step-desc">支持英文、中文学术论文及任意文字型 PDF。系统自动识别文档语言，智能解析章节结构与全文内容，自动过滤参考文献等噪音信息。</div>
       </div>
       <div class="step-card">
         <div class="step-num">2</div>
         <div class="step-title">语义向量化入库</div>
-        <div class="step-desc">文本按章节切分后，由 BGE-M3 向量化模型转化为高维语义向量，存入 pgvector 向量数据库。支持中英双语语义检索，章节名采用「Abstract（摘要）」双语格式存储。</div>
+        <div class="step-desc">文本按章节切分后转化为高维语义向量，存入向量数据库，支持中英双语语义检索与章节定位。</div>
       </div>
       <div class="step-card">
         <div class="step-num">3</div>
         <div class="step-title">精准检索 + AI 作答</div>
-        <div class="step-desc">提问时检索最相关文本块，由 DeepSeek 主力模型生成有据可查的回答并标注来源章节。遇到图表可框选截图，Qwen-VL 视觉模型实时解读图表与公式内容。</div>
+        <div class="step-desc">提问时检索最相关文本块，AI 生成有据可查的回答并标注来源章节。遇到图表可框选截图，AI 视觉分析实时解读图表与公式内容。</div>
       </div>
     </div>
   </div>
@@ -531,24 +575,24 @@ input, textarea { font-family: inherit; }
     </div>
     <div class="features-grid">
       <div class="feat-card">
+        <div class="feat-icon">🖋</div>
+        <div class="feat-title">论文智能写作</div>
+        <div class="feat-desc">AI 根据主题与已选文献自动生成三级目录草稿（章/节/写作要点），可自由增删、改名、排序、启用禁用；确认目录后进入逐章写作，每章可独立生成、随时停止重来。参考文献章节自动从真实文献信息汇总编号，不由 AI 编造。支持一键生成全文、导出，写完可直接开始新的一篇。</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📝</div>
+        <div class="feat-title">文献综述生成</div>
+        <div class="feat-desc">勾选文献并自定义综述结构模块（研究背景、核心方法、主要发现、不足与展望等，可增删改名），一键生成后自动提取目录并支持定位跳转。可整合"文献检索"收藏的外部文献摘要作为补充背景，参考文献单独汇总展示，支持复制与导出。</div>
+      </div>
+      <div class="feat-card">
         <div class="feat-icon">📖</div>
         <div class="feat-title">PDF 精读对话</div>
-        <div class="feat-desc">三栏布局：左侧章节目录 + 中栏 PDF 原文阅读 + 右栏 AI 对话。可框选页面任意区域截图，由 Qwen-VL 视觉模型实时解读图表、公式和表格，也可粘贴/上传图片分析。</div>
+        <div class="feat-desc">三栏布局：左侧章节目录 + 中栏 PDF 原文阅读 + 右栏 AI 对话。可框选页面任意区域截图，由 AI 视觉分析实时解读图表、公式和表格，也可粘贴/上传图片分析。</div>
       </div>
       <div class="feat-card">
         <div class="feat-icon">💬</div>
         <div class="feat-title">多文献知识库问答</div>
         <div class="feat-desc">同时勾选多篇文献提问，系统对每篇单独检索代表性内容，输出逐篇分析报告及综合对比。支持按章节定向提问（摘要、方法、结论），可开启联网检索补充最新信息。</div>
-      </div>
-      <div class="feat-card">
-        <div class="feat-icon">📝</div>
-        <div class="feat-title">文献综述生成</div>
-        <div class="feat-desc">勾选多篇文献并输入综述主题，一键生成结构完整的文献综述，覆盖研究背景、各文献核心观点及对比分析，支持一键复制与导出 .txt 文件。</div>
-      </div>
-      <div class="feat-card">
-        <div class="feat-icon">✍️</div>
-        <div class="feat-title">论文章节撰写</div>
-        <div class="feat-desc">提供摘要、引言、文献综述、研究方法、实验结果、讨论与结论等标准章节框架，结合已上传文献内容逐章 AI 辅助撰写，支持一键生成全文并导出。</div>
       </div>
       <div class="feat-card">
         <div class="feat-icon">✍️</div>
@@ -616,8 +660,8 @@ input, textarea { font-family: inherit; }
   <div class="auth-box">
     <button onclick="closeAuth()" style="position:absolute;top:14px;right:16px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:1.2rem">✕</button>
     <div style="text-align:center;margin-bottom:22px">
-      <div style="font-size:1.6rem;margin-bottom:6px">📚</div>
-      <div style="font-family:'Playfair Display',serif;font-size:1.15rem;color:var(--fg);font-weight:700">DocMind</div>
+      <img src="/static/assets/logo-icon.png" alt="慧策智写" style="width:44px;height:44px;margin-bottom:6px">
+      <div style="font-family:'Playfair Display',serif;font-size:1.15rem;color:var(--fg);font-weight:700">慧策智写</div>
       <div style="font-size:.78rem;color:var(--muted);margin-top:4px">上传 PDF，构建私人知识库</div>
     </div>
     <div style="display:flex;border-bottom:1px solid var(--border);margin-bottom:22px">
@@ -647,11 +691,11 @@ input, textarea { font-family: inherit; }
     <div class="faq-list">
       <div class="faq-item">
         <button class="faq-q" onclick="toggleFaq(this)">上传的 PDF 数据会发送给第三方吗？<span class="faq-chevron">▾</span></button>
-        <div class="faq-a">PDF 文件存储在我们位于中国境内的自有服务器，不会公开。处理时文本片段会发送给以下第三方 API：硅基流动（文本向量化 BGE-M3、图表截图分析 Qwen-VL）、DeepSeek（问答/综述/撰写）。原始 PDF 文件不会发送给任何 AI 服务，仅发送提取后的文本片段。</div>
+        <div class="faq-a">PDF 文件存储在我们位于中国境内的自有服务器，不会公开。处理时提取后的文本片段会发送给国内合规的 AI 服务商用于问答生成、内容分析等功能，原始 PDF 文件不会发送给任何第三方。</div>
       </div>
       <div class="faq-item">
         <button class="faq-q" onclick="toggleFaq(this)">支持哪些类型的 PDF？<span class="faq-chevron">▾</span></button>
-        <div class="faq-a">支持中英文学术论文、报告、书籍等文字型 PDF，单文件最大 50MB。系统自动检测语言，英文论文使用 PyMuPDF 精准解析章节结构，中文文档使用 MarkItDown 提取。纯扫描件无文字层的效果较差。</div>
+        <div class="faq-a">支持中英文学术论文、报告、书籍等文字型 PDF，单文件最大 50MB。系统自动识别语言并采用相应解析方式精准提取章节结构与全文内容。纯扫描件无文字层的效果较差。</div>
       </div>
       <div class="faq-item">
         <button class="faq-q" onclick="toggleFaq(this)">PDF 精读的「框选分析」如何使用？<span class="faq-chevron">▾</span></button>
@@ -691,8 +735,8 @@ input, textarea { font-family: inherit; }
   <div class="wrap">
     <div class="footer-grid">
       <div>
-        <div class="brand"><div class="brand-icon">📚</div><span class="brand-name">DocMind</span></div>
-        <div class="footer-brand-desc">AI 驱动的学术研究助手——PDF 问答、精读对话、截图分析、文献综述、论文撰写、学术语言优化，一站搞定。</div>
+        <div class="brand"><div class="brand-icon"><img src="/static/assets/logo-icon.png" alt="慧策智写"></div><span class="brand-name">慧策智写</span></div>
+        <div class="footer-brand-desc">AI 驱动的学术研究助手——大容量知识库、论文智能写作、参考文献真实可查，PDF 问答、精读对话、截图分析、文献综述、学术语言优化，一站搞定。</div>
       </div>
       <div>
         <div class="footer-col-title">产品</div>
@@ -719,11 +763,12 @@ input, textarea { font-family: inherit; }
       </div>
     </div>
     <div class="footer-bottom">
-      <span>© 2026 南京道普斯慧策智能科技有限公司 保留所有权利。</span>
+      <span>© 2026 南京道普斯慧策智能科技有限公司 版权所有</span>
       <span style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
         <a href="https://beian.miit.gov.cn" target="_blank" rel="noopener"
            style="color:inherit;text-decoration:none;font-size:.72rem">苏ICP备2026046699号</a>
-        <span style="font-family:'Courier New',monospace;font-size:.7rem">DeepSeek · Qwen-VL · BGE-M3</span>
+        <a href="https://beian.mps.gov.cn/#/query/webSearch?recordcode=32010402002567" target="_blank" rel="noopener"
+           style="color:inherit;text-decoration:none;font-size:.72rem">苏公网安备32010402002567号</a>
       </span>
     </div>
   </div>
@@ -909,10 +954,15 @@ document.addEventListener('DOMContentLoaded',()=>{
       const icpEl = document.querySelector('a[href*="beian.miit.gov.cn"]');
       if (icpEl) { icpEl.textContent = cfg.icp; if(cfg.icp_url) icpEl.href=cfg.icp_url; }
     }
+    // 更新公安备案
+    if (cfg.beian_mps) {
+      const mpsEl = document.querySelector('a[href*="beian.mps.gov.cn"]');
+      if (mpsEl) { mpsEl.textContent = cfg.beian_mps; if(cfg.beian_mps_url) mpsEl.href=cfg.beian_mps_url; }
+    }
     // 公司名称
     if (cfg.company_name) {
       const compEl = document.querySelector('.footer-bottom span:first-child');
-      if (compEl) compEl.textContent = `© 2026 ${cfg.company_name} 保留所有权利。`;
+      if (compEl) compEl.textContent = `© 2026 ${cfg.company_name} 版权所有`;
     }
     // 公告
     if (cfg.announcement_active && cfg.announcement) {
@@ -959,7 +1009,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     <!-- Privacy Policy -->
     <div id="legal-privacy">
       <h3>总则</h3>
-      <p>DocMind（以下简称"我们"）重视您的隐私。本隐私政策说明我们在您使用 <strong>DocMind</strong> 平台（https://docmindai.up.railway.app/）时收集、使用和保护您的信息的方式。使用本服务即表示您同意本政策的条款。</p>
+      <p>慧策智写（以下简称"我们"）重视您的隐私。本隐私政策说明我们在您使用 <strong>慧策智写</strong> 平台时收集、使用和保护您的信息的方式。使用本服务即表示您同意本政策的条款。</p>
 
       <h3>我们收集的信息</h3>
       <ul>
@@ -985,15 +1035,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         <li><strong>传输安全</strong>：所有 API 通信均通过 HTTPS/TLS 加密</li>
         <li><strong>密码安全</strong>：使用 SHA-256 + 随机盐哈希存储，平台无法还原明文密码</li>
       </ul>
-
-      <h3>第三方服务</h3>
-      <p>为提供服务，我们使用以下第三方工具，它们可能处理您的部分数据：</p>
-      <ul>
-        <li><strong>DeepSeek AI</strong>（北京深度求索人工智能基础技术研究有限公司）— 提供大语言模型推理服务；您的文档检索内容和问题会发送至其 API</li>
-        <li><strong>硅基流动 SiliconFlow</strong>（北京硅基流动科技有限公司）— 提供文本向量化（BGE-M3）与图像分析（Qwen-VL）服务</li>
-        <li><strong>腾讯云</strong>（中国）— 服务器与网络基础设施</li>
-        <li><strong>支付宝</strong>（蚂蚁科技集团）— 订阅支付处理；我们不接触您的银行卡等支付凭证</li>
-      </ul>
+      <p>我们仅在提供服务、执行套餐限额及改进产品所必需的范围内使用您的数据，未经您本人授权，不会将您的文件用于本服务以外的任何用途。</p>
 
       <h3>本地存储（Cookie 替代）</h3>
       <p>我们使用浏览器 <code>localStorage</code> 存储登录凭证（JWT Token），用于保持登录状态，不设置第三方追踪 Cookie，也不使用任何广告追踪技术。</p>
@@ -1017,7 +1059,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     <!-- Terms of Service -->
     <div id="legal-terms" style="display:none">
       <h3>服务说明</h3>
-      <p>DocMind 是一款面向学术研究者和学生的 AI 辅助工具，由南京道普斯慧策智能科技有限公司开发运营，提供 PDF 知识库问答、文献综述生成、论文章节撰写及学术语言优化功能。本服务按"现状"提供，具体功能以平台实际可用状态为准。</p>
+      <p>慧策智写是一款面向学术研究者和学生的 AI 辅助工具，提供 PDF 知识库问答、文献综述生成、论文智能写作及学术语言优化功能。本服务按"现状"提供，具体功能以平台实际可用状态为准。</p>
 
       <h3>用户资格</h3>
       <ul>
@@ -1039,11 +1081,12 @@ document.addEventListener('DOMContentLoaded',()=>{
       </ul>
 
       <h3>AI 内容免责声明</h3>
-      <p>平台所有 AI 生成内容（问答、综述、章节草稿、语言优化结果）仅供参考，不构成专业法律、医疗或学术认证建议。AI 可能产生错误、过时或不准确的输出。<strong>您在学术提交前须自行审核和修改 AI 生成内容，并对最终提交内容负全责。</strong></p>
+      <p>平台所有 AI 生成内容（问答、综述、写作草稿、语言优化结果）均由人工智能模型生成，仅供参考，不代表平台立场或观点，不构成专业法律、医疗或学术认证建议。AI 可能产生错误、过时或不准确的输出。<strong>您在学术提交前须自行审核和修改 AI 生成内容，并对最终提交内容负全责。</strong></p>
 
       <h3>学术诚信</h3>
       <ul>
         <li>本平台的语言优化、写作辅助等功能，仅用于辅助合法的学术写作润色与表达改进。</li>
+        <li>本站生成的范文、模板及写作草稿仅供格式参考与写作借鉴，严禁用于抄袭、直接挪用等学术不端行为，不得作为毕业论文、期刊投稿等正式用途直接提交。</li>
         <li>严禁将本服务用于伪造研究成果、规避学术诚信审查或任何形式的学术不端行为。</li>
         <li>您应遵守所在院校、期刊或机构关于 AI 工具使用的相关规定，并在必要时如实披露 AI 辅助情况。</li>
         <li>因违规使用导致的一切后果由用户自行承担。</li>
@@ -1051,16 +1094,14 @@ document.addEventListener('DOMContentLoaded',()=>{
 
       <h3>知识产权</h3>
       <ul>
-        <li>您上传的 PDF 文件及其内容的版权归您或原著作权人所有，DocMind 仅获得提供服务所必需的有限授权。</li>
+        <li>您上传的 PDF 文件及其内容的版权归您或原著作权人所有，慧策智写仅获得提供服务所必需的有限授权。</li>
         <li>AI 生成内容的版权归属由您自行判断；平台对生成内容不主张任何版权。</li>
-        <li>DocMind 名称、标志及产品界面属于我们的知识产权，未经授权不得复制或使用。</li>
+        <li>本网站的设计、功能及技术实现均受著作权法保护，慧策智写名称、标志及产品界面亦属于我们的知识产权；任何单位或个人未经授权不得以任何方式复制或使用，违者将依法追究法律责任。</li>
       </ul>
 
       <h3>套餐与计费</h3>
       <ul>
-        <li><strong>免费版</strong>：每日 20 次问答，最多 5 篇文献。</li>
-        <li><strong>基础版（¥9.9/月）</strong>：每日 100 次问答，最多 30 篇文献，含截图分析与语言优化。</li>
-        <li><strong>专业版（¥19.9/月）</strong>：不限问答次数，最多 100 篇文献，优先 API 配额。</li>
+        <li>本平台提供免费版、基础版、专业版及专属尊享版四档套餐，各档位的价格、问答次数与文献数量限额，以工作台内「定价方案」页面实时展示为准。</li>
         <li><strong>专属尊享版</strong>：额度不设上限并含 1v1 顾问与人工精修服务，定制报价，请联系顾问。</li>
         <li>付费套餐为按月单次付费，不会自动续费；到期后自动降为免费版。</li>
       </ul>
@@ -1076,13 +1117,10 @@ document.addEventListener('DOMContentLoaded',()=>{
       <p>我们保留随时修改、暂停或终止部分或全部服务的权利，重大变更将提前 14 天通知。如因违反本条款，我们有权立即终止您的账号。</p>
 
       <h3>责任限制</h3>
-      <p>在适用法律允许的最大范围内，DocMind 对因使用或无法使用本服务所造成的间接、偶然或后果性损失不承担责任。我们对单一事件的最大赔偿责任不超过您在过去 12 个月内支付的订阅费用。</p>
-
-      <h3>适用法律</h3>
-      <p>本条款受中华人民共和国法律管辖。如发生争议，双方应首先协商解决；协商不成的，提交南京市有管辖权的人民法院裁决。</p>
+      <p>在适用法律允许的最大范围内，慧策智写对因使用或无法使用本服务所造成的间接、偶然或后果性损失不承担责任。我们对单一事件的最大赔偿责任不超过您在过去 12 个月内支付的订阅费用。</p>
 
       <h3>联系我们</h3>
-      <p>如有服务条款相关问题，请联系：<a href="mailto:topsaitech@163.com">topsaitech@163.com</a><br>运营主体：南京道普斯慧策智能科技有限公司 · 地址：江苏省南京市秦淮区永丰大道36号3幢904-6</p>
+      <p>如有服务条款相关问题，请联系：<a href="mailto:topsaitech@163.com">topsaitech@163.com</a></p>
     </div>
   </div>
 </div>

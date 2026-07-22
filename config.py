@@ -90,17 +90,17 @@ PLAN_LIMITS: dict[str, dict] = {
     "plus": {
         "max_tokens":        4096,
         "review_chunks":     8,
-        "review_max_docs":   10,
+        "review_max_docs":   20,
         "reduce_max_words":  3000,
-        "daily_query_limit": 100,
+        "daily_query_limit": 50,
         "pdf_limit":         30,
     },
     "pro": {
         "max_tokens":        8192,
         "review_chunks":     12,
-        "review_max_docs":   20,
+        "review_max_docs":   50,
         "reduce_max_words":  10000,
-        "daily_query_limit": 999999,
+        "daily_query_limit": 100,
         "pdf_limit":         100,
     },
     "enterprise": {

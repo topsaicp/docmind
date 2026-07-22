@@ -31,9 +31,9 @@ def send_verify_email(to_email: str, token: str) -> bool:
                 "content-type": "application/json",
             },
             json={
-                "sender":      {"name": "DocMind", "email": _SENDER_EMAIL},
+                "sender":      {"name": "慧策智写", "email": _SENDER_EMAIL},
                 "to":          [{"email": to_email}],
-                "subject":     "验证您的 DocMind 邮箱",
+                "subject":     "验证您的慧策智写邮箱",
                 "htmlContent": _verify_html(to_email, verify_url),
             },
             timeout=10,
@@ -61,7 +61,7 @@ def send_notify(to_email: str, subject: str, html: str) -> bool:
                 "content-type": "application/json",
             },
             json={
-                "sender":      {"name": "DocMind", "email": _SENDER_EMAIL},
+                "sender":      {"name": "慧策智写", "email": _SENDER_EMAIL},
                 "to":          [{"email": to_email}],
                 "subject":     subject,
                 "htmlContent": html,
@@ -93,9 +93,9 @@ def send_reset_email(to_email: str, token: str) -> bool:
                 "content-type": "application/json",
             },
             json={
-                "sender":      {"name": "DocMind", "email": _SENDER_EMAIL},
+                "sender":      {"name": "慧策智写", "email": _SENDER_EMAIL},
                 "to":          [{"email": to_email}],
-                "subject":     "DocMind 密码重置",
+                "subject":     "慧策智写密码重置",
                 "htmlContent": _reset_html(to_email, reset_url),
             },
             timeout=10,
@@ -119,7 +119,7 @@ def _reset_html(email: str, reset_url: str) -> str:
              style="background:#1a1a28;border-radius:12px;border:1px solid rgba(255,255,255,.08);overflow:hidden">
         <tr><td style="background:linear-gradient(135deg,#1a1a28,#252535);padding:32px 40px;text-align:center;
                        border-bottom:1px solid rgba(201,168,76,.2)">
-          <div style="font-size:22px;font-weight:700;color:#c9a84c;letter-spacing:1px">✦ DocMind</div>
+          <div style="font-size:22px;font-weight:700;color:#c9a84c;letter-spacing:1px">✦ 慧策智写</div>
           <div style="font-size:12px;color:#888;margin-top:4px">AI 学术文献助手</div>
         </td></tr>
         <tr><td style="padding:36px 40px">
@@ -143,7 +143,7 @@ def _reset_html(email: str, reset_url: str) -> str:
         </td></tr>
         <tr><td style="padding:16px 40px;border-top:1px solid rgba(255,255,255,.06);
                        text-align:center;color:#555;font-size:11px">
-          此邮件由 DocMind 系统自动发送，请勿回复。如有问题请联系
+          此邮件由慧策智写系统自动发送，请勿回复。如有问题请联系
           <a href="mailto:{_SUPPORT_MAIL}" style="color:#888">{_SUPPORT_MAIL}</a>
         </td></tr>
       </table>
@@ -164,13 +164,13 @@ def _verify_html(email: str, verify_url: str) -> str:
              style="background:#1a1a28;border-radius:12px;border:1px solid rgba(255,255,255,.08);overflow:hidden">
         <tr><td style="background:linear-gradient(135deg,#1a1a28,#252535);padding:32px 40px;text-align:center;
                        border-bottom:1px solid rgba(201,168,76,.2)">
-          <div style="font-size:22px;font-weight:700;color:#c9a84c;letter-spacing:1px">✦ DocMind</div>
+          <div style="font-size:22px;font-weight:700;color:#c9a84c;letter-spacing:1px">✦ 慧策智写</div>
           <div style="font-size:12px;color:#888;margin-top:4px">AI 学术文献助手</div>
         </td></tr>
         <tr><td style="padding:36px 40px">
           <h2 style="color:#e8e8f0;font-size:18px;font-weight:600;margin:0 0 12px">验证您的邮箱地址</h2>
           <p style="color:#aaa;font-size:14px;line-height:1.7;margin:0 0 28px">
-            您好，感谢注册 DocMind。请点击下方按钮完成邮箱验证，
+            您好，感谢注册慧策智写。请点击下方按钮完成邮箱验证，
             验证后即可开始使用 AI 文献问答、文献综述等全部功能。
           </p>
           <div style="text-align:center;margin:0 0 28px">
@@ -190,7 +190,7 @@ def _verify_html(email: str, verify_url: str) -> str:
         </td></tr>
         <tr><td style="padding:16px 40px;border-top:1px solid rgba(255,255,255,.06);
                        text-align:center;color:#555;font-size:11px">
-          此邮件由 DocMind 系统自动发送，请勿回复。如有问题请联系
+          此邮件由慧策智写系统自动发送，请勿回复。如有问题请联系
           <a href="mailto:{_SUPPORT_MAIL}" style="color:#888">{_SUPPORT_MAIL}</a>
         </td></tr>
       </table>

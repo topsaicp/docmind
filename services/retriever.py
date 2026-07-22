@@ -380,6 +380,9 @@ def ask(
         context = build_context(hits)
         sources = [{"filename": h["filename"], "score": h["score"],
                     "section": h.get("section", "")} for h in hits]
+        if extra_context and extra_context.strip():
+            extra_block = f"\n\n══════════════════════════════════════\n【外部文献补充资料】\n{extra_context.strip()}"
+            context = context + extra_block if context else extra_context.strip()
         prompt = f"""你是专业学术写作助手，请严格按照指示完成写作任务。
 
 参考文献内容：

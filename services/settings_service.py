@@ -9,7 +9,7 @@ from config import PLAN_LIMITS
 
 _CACHE: dict = {}
 _CACHE_EXPIRY: dict = {}
-_TTL = timedelta(minutes=5)
+_TTL = timedelta(seconds=10)
 
 # ── 默认套餐配置（与 config.py PLAN_LIMITS 保持一致）──────────────────────
 DEFAULT_PLANS: dict = {
@@ -34,10 +34,10 @@ DEFAULT_PLANS: dict = {
         "badge": "",
         "features": [
             "最多 30 篇 PDF 文献",
-            "每日 100 次智能问答",
+            "每日 50 次智能问答",
             "全部免费版功能",
             "PDF 截图智能分析（图表/公式/表格）",
-            "文献综述（最多 10 篇）",
+            "文献综述（最多 20 篇）",
             "学术语言优化（3000 词/次）",
             "更长回复模式（2× token）",
             "专属邮件客服",
@@ -51,10 +51,10 @@ DEFAULT_PLANS: dict = {
         "badge": "最受欢迎",
         "features": [
             "最多 100 篇 PDF 文献",
-            "无限每日问答次数",
+            "每日 100 次智能问答",
             "全部基础版功能",
             "学术语言优化（10000 词/次）",
-            "文献综述（最多 20 篇）",
+            "文献综述（最多 50 篇）",
             "超长回复模式（4× token）",
             "高峰期优先 API 配额",
             "优先客服支持（24h 响应）",
@@ -87,6 +87,8 @@ DEFAULT_SITE: dict = {
     "phone": "",
     "icp": "苏ICP备2026046699号",
     "icp_url": "https://beian.miit.gov.cn",
+    "beian_mps": "苏公网安备32010402002567号",
+    "beian_mps_url": "https://beian.mps.gov.cn/#/query/webSearch?recordcode=32010402002567",
     "announcement": "",
     "announcement_active": False,
     "announcement_type": "info",

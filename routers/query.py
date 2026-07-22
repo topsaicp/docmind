@@ -43,6 +43,15 @@ def _check_and_count_query(user: User, session: Session):
     session.commit()
 
 
+def _check_review_doc_limit(plan: str, task_hint: str, doc_ids: list[str] | None):
+    if task_hint == "review" and doc_ids:
+        limit = get_limits(plan)["review_max_docs"]
+        if len(doc_ids) > limit:
+            plan_names = {"free": "免费版", "plus": "基础版", "pro": "专业版"}
+            label = plan_names.get(plan, plan)
+            raise HTTPException(403, f"{label}套餐最多支持 {limit} 篇文献同时生成综述，请减少选择或升级套餐")
+
+
 class HistoryMsg(BaseModel):
     role:    str   # "user" | "assistant"
     content: str
@@ -65,6 +74,7 @@ def ask_question(req: AskRequest, session: Session = Depends(get_session),
     if not req.question.strip():
         return {"error": "问题不能为空"}
     _check_and_count_query(current_user, session)
+    _check_review_doc_limit(effective_plan(current_user), req.task_hint, req.doc_ids)
     answer, sources = ask(
         req.question,
         doc_ids       = req.doc_ids or None,
@@ -86,13 +96,14 @@ def ask_stream(req: AskRequest, session: Session = Depends(get_session),
         return {"error": "问题不能为空"}
     _check_and_count_query(current_user, session)
 
+    plan = effective_plan(current_user)
+    _check_review_doc_limit(plan, req.task_hint, req.doc_ids)
+
     doc_ids   = req.doc_ids or None
     section   = req.section or None
     task_hint = req.task_hint
     history   = [{"role": m.role, "content": m.content} for m in req.history]
     use_web   = req.use_web
-
-    plan = effective_plan(current_user)
 
     def event_generator():
         try:

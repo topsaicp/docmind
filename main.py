@@ -13,6 +13,7 @@ from routers.vision   import router as vision_router
 from routers.search   import router as search_router
 from routers.site     import router as site_router
 from routers.admin    import router as admin_router
+from routers.write_outline import router as write_outline_router
 
 app = FastAPI(title="PDF 知识库问答系统", version="1.0.0")
 
@@ -65,6 +66,7 @@ app.include_router(search_router)
 app.include_router(pay_router)
 app.include_router(site_router)
 app.include_router(admin_router)
+app.include_router(write_outline_router)
 
 # 静态前端
 frontend_dir = Path(__file__).parent / "frontend"

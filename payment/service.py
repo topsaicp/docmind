@@ -12,12 +12,6 @@ from sqlalchemy.orm import Session
 from db.database import User
 from .models import ActivationCode, PayOrder
 
-# ── 线上可售套餐（改价只改这里）────────────────────────────────────
-PLANS: dict[str, dict] = {
-    "plus": {"name": "基础版", "amount": "9.90",  "days": 30},
-    "pro":  {"name": "专业版", "amount": "19.90", "days": 30},
-}
-
 PLAN_NAMES = {
     "free":   "免费版",
     "plus":   "基础版",

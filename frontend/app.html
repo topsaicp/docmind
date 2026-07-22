@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DocMind · 工作台</title>
+<title>慧策智写 · 工作台</title>
+<link rel="icon" type="image/png" href="/static/assets/logo-icon.png">
 <!-- <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script> -->
 
 <script src="/static/pdf.min.js"></script>
@@ -34,8 +35,9 @@ input,textarea{font-family:inherit}
   border-bottom:1px solid var(--border);
   display:flex;align-items:center;padding:0 18px;gap:12px}
 .tb-brand{display:flex;align-items:center;gap:8px;width:var(--nav-w);flex-shrink:0}
-.tb-brand-icon{width:24px;height:24px;background:var(--gold);border-radius:4px;
-  display:flex;align-items:center;justify-content:center;font-size:12px}
+.tb-brand-icon{width:24px;height:24px;border-radius:50%;overflow:hidden;
+  display:flex;align-items:center;justify-content:center}
+.tb-brand-icon img{width:100%;height:100%;object-fit:contain}
 .tb-brand-name{font-family:'Playfair Display',serif;font-size:.95rem;font-weight:700;color:var(--fg)}
 .tb-spacer{flex:1}
 .tb-user{font-size:.78rem;color:var(--muted)}
@@ -282,6 +284,119 @@ input,textarea{font-family:inherit}
 .ws-progress{font-size:.7rem;color:var(--muted);padding:4px 14px 2px}
 .write-footer-bar{padding:10px 22px;border-top:1px solid var(--border);
   display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap}
+
+/* ── 通用：模块编辑器 + 目录导航（综述/论文撰写共用） ── */
+.mod-layout{display:grid;grid-template-columns:250px 1fr;flex:1;overflow:hidden}
+.mod-side{border-right:1px solid var(--border);overflow-y:auto;padding:14px 16px;
+  display:flex;flex-direction:column;gap:14px}
+.mod-section-label{font-size:.7rem;color:var(--muted);letter-spacing:.06em;margin-bottom:6px}
+.mod-item{display:flex;align-items:center;gap:6px;padding:5px 7px;border:1px solid var(--border);
+  border-radius:7px;background:rgba(255,255,255,.03);margin-bottom:5px}
+.mod-item.off{opacity:.4}
+.mod-item input[type=checkbox]{accent-color:var(--gold);cursor:pointer;flex:none}
+.mod-item input[type=text]{flex:1;background:transparent;border:none;color:var(--fg);
+  font-size:.76rem;padding:2px 4px;min-width:0}
+.mod-item input[type=text]:focus{outline:1px solid rgba(201,168,76,.4);border-radius:3px}
+.mod-btns{display:flex;gap:1px;flex:none}
+.mod-btns button{background:none;border:none;color:var(--muted);cursor:pointer;
+  font-size:.68rem;padding:2px 4px;border-radius:3px}
+.mod-btns button:hover{color:var(--gold);background:rgba(201,168,76,.12)}
+.mod-add{display:flex;gap:5px;margin-top:2px}
+.mod-add input{flex:1;background:rgba(255,255,255,.05);border:1px solid var(--border);
+  border-radius:6px;padding:5px 8px;font-size:.72rem;color:var(--fg)}
+.mod-add input:focus{border-color:rgba(201,168,76,.4);outline:none}
+.mod-toc{display:flex;flex-direction:column;gap:1px}
+.mod-toc a{display:block;padding:5px 8px;font-size:.74rem;color:var(--muted);
+  text-decoration:none;border-radius:6px;border-left:2px solid transparent;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:all .12s}
+.mod-toc a:hover{color:var(--gold)}
+.mod-toc a.active{color:var(--gold);border-left-color:var(--gold);background:rgba(201,168,76,.08)}
+.mod-main{overflow-y:auto;display:flex;flex-direction:column}
+@media (max-width:900px){
+  .mod-layout{grid-template-columns:1fr}
+  .mod-side{border-right:none;border-bottom:1px solid var(--border);max-height:260px}
+}
+
+/* 综述正文渲染（生成完成后替换纯文本为带标题的排版） */
+.review-body-fmt h2{font-size:1rem;color:var(--gold);margin:20px 0 10px;
+  padding-bottom:6px;border-bottom:1px solid var(--border)}
+.review-body-fmt h2:first-child{margin-top:0}
+.review-body-fmt h3{font-size:.9rem;color:var(--fg);margin:14px 0 7px}
+.review-body-fmt p{font-size:.84rem;line-height:1.85;margin:0 0 10px;color:var(--fg2)}
+
+/* ── 论文撰写：目录规划阶段（三级树） ── */
+.write-plan-subtitle{padding:0 22px 10px;font-size:.74rem;color:var(--muted)}
+.write-plan-stage{flex:1;overflow-y:auto;padding:16px 22px;display:flex;flex-direction:column;gap:12px}
+.plan-l1{border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:rgba(255,255,255,.02);
+  transition:opacity .15s}
+.plan-l1.plan-l1-off{opacity:.45}
+.plan-l2{margin:6px 0 0 26px;padding-left:10px;border-left:2px solid rgba(201,168,76,.25)}
+.plan-l3{margin:4px 0 0 20px;display:flex;align-items:center;gap:6px}
+.plan-row{display:flex;align-items:center;gap:8px}
+.plan-row input[type=checkbox]{accent-color:var(--gold);cursor:pointer;flex:none}
+.plan-chapter-badge{flex:none;font-size:.68rem;font-weight:700;color:#0f0f1a;background:var(--gold);
+  padding:2px 9px;border-radius:10px;white-space:nowrap}
+.plan-chapter-badge.off{color:var(--muted);background:rgba(255,255,255,.08)}
+.plan-l2-num{flex:none;font-size:.76rem;color:var(--gold);opacity:.85;white-space:nowrap}
+.plan-input{flex:1;background:transparent;border:none;border-bottom:1px dashed transparent;
+  color:var(--fg);font-size:.84rem;padding:3px 4px;min-width:0;font-weight:600}
+.plan-l2 .plan-input{font-size:.8rem;color:var(--fg2);font-weight:400}
+.plan-l3 .plan-input{font-size:.76rem;color:var(--muted);font-weight:400}
+.plan-input:focus{outline:none;border-bottom-color:rgba(201,168,76,.4)}
+.plan-bullet{color:var(--muted);flex:none}
+.plan-btns{display:flex;gap:2px;flex:none}
+.plan-btns button{background:none;border:none;color:var(--muted);cursor:pointer;
+  font-size:.68rem;padding:2px 6px;border-radius:3px;white-space:nowrap}
+.plan-btns button:hover{color:var(--gold);background:rgba(201,168,76,.12)}
+.plan-l3-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.68rem;
+  padding:2px 6px;border-radius:3px;flex:none}
+.plan-l3-del:hover{color:var(--gold);background:rgba(201,168,76,.12)}
+.plan-add-row{font-size:.72rem;color:var(--muted);opacity:.7;cursor:pointer;padding:5px 4px 2px;
+  margin-left:20px;transition:opacity .15s,color .15s}
+.plan-add-row:hover{opacity:1;color:var(--gold)}
+.plan-add-l1{margin-left:0;padding:8px 4px}
+.write-plan-actions{display:flex;align-items:center;gap:14px;padding-top:10px;border-top:1px solid var(--border)}
+.plan-confirm-hint{flex:1;text-align:center;font-size:.72rem;color:var(--muted)}
+
+/* ── 论文撰写：单章节写作阶段 ── */
+.write-toc-side{padding:10px !important;gap:0 !important}
+.toc-l1-item{padding:8px 8px;border-radius:7px;cursor:pointer;margin-bottom:2px}
+.toc-l1-item:hover{background:rgba(255,255,255,.04)}
+.toc-l1-item.active{background:rgba(201,168,76,.1)}
+.toc-l1-item.disabled{cursor:not-allowed;opacity:.55}
+.toc-l1-head{display:flex;align-items:center;gap:6px}
+.toc-num{font-size:.68rem;color:var(--muted);flex:none}
+.toc-l1-label{font-size:.8rem;color:var(--fg);font-weight:600}
+.toc-l1-item.active .toc-l1-label{color:var(--gold)}
+.toc-status{font-size:.66rem;color:var(--muted);padding-left:22px;margin-top:2px}
+.toc-l2{font-size:.7rem;color:var(--muted);padding:2px 0 0 22px}
+.toc-l3{font-size:.66rem;color:var(--muted);opacity:.75;padding:1px 0 0 32px}
+.write-section-header{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--border)}
+.write-section-header .ws-num{font-size:.76rem;color:var(--gold);flex:none}
+.write-section-header .ws-title{font-size:1rem;font-weight:600;color:var(--fg);flex:1}
+.write-section-hint{margin:14px 20px 0;padding:10px 14px;background:rgba(201,168,76,.06);
+  border:1px solid rgba(201,168,76,.18);border-radius:8px;font-size:.76rem;color:var(--fg2);line-height:1.7}
+.write-section-hint > div + div{margin-top:6px}
+
+/* ── 外部引用文献勾选器（综述/论文撰写共用） ── */
+.ext-ref-toggle{display:flex;align-items:center;justify-content:space-between;cursor:pointer;
+  font-size:.78rem;color:var(--fg2);padding:8px 0;user-select:none}
+.ext-ref-body{display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto;
+  padding:4px 2px 8px}
+.ext-ref-empty{font-size:.74rem;color:var(--muted);padding:10px 4px}
+.ext-ref-item{display:flex;align-items:flex-start;gap:8px;padding:6px 8px;border-radius:6px;
+  cursor:pointer;border:1px solid transparent}
+.ext-ref-item:hover{background:rgba(255,255,255,.03)}
+.ext-ref-item input[type=checkbox]{accent-color:var(--gold);cursor:pointer;margin-top:2px;flex:none}
+.ext-ref-title{font-size:.78rem;color:var(--fg);line-height:1.4}
+.ext-ref-meta{font-size:.7rem;color:var(--muted);margin-top:2px}
+.ext-ref-actions{display:flex;gap:8px;padding-top:4px}
+.refs-box{margin:14px 20px;padding:12px 14px;background:rgba(255,255,255,.02);
+  border:1px solid var(--border);border-radius:8px;flex-shrink:0}
+.refs-box-title{font-size:.78rem;font-weight:600;color:var(--fg);margin-bottom:8px;
+  display:flex;align-items:center;justify-content:space-between}
+.refs-box-content{font-size:.78rem;color:var(--fg2);line-height:1.8;white-space:pre-wrap;
+  max-height:200px;overflow-y:auto}
 
 /* ── Review page ── */
 .review-page-body{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:0}
@@ -580,8 +695,8 @@ input,textarea{font-family:inherit}
 <!-- ── Top navbar ── -->
 <div id="topbar">
   <div class="tb-brand">
-    <div class="tb-brand-icon">📚</div>
-    <span class="tb-brand-name">DocMind</span>
+    <div class="tb-brand-icon"><img src="/static/assets/logo-icon.png" alt="慧策智写"></div>
+    <span class="tb-brand-name">慧策智写</span>
   </div>
   <div class="tb-spacer"></div>
   <span class="tb-user" id="tbUser"></span>
@@ -594,9 +709,9 @@ input,textarea{font-family:inherit}
     <!-- 登录/注册表单 -->
     <div id="auth-form-panel">
       <div style="text-align:center;margin-bottom:20px">
-        <div style="font-size:1.4rem;margin-bottom:6px">📚</div>
+        <img src="/static/assets/logo-icon.png" alt="慧策智写" style="width:36px;height:36px;margin-bottom:6px">
         <div style="font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700">请先登录</div>
-        <div style="font-size:.73rem;color:var(--muted);margin-top:4px">登录后使用 DocMind 工作台</div>
+        <div style="font-size:.73rem;color:var(--muted);margin-top:4px">登录后使用慧策智写工作台</div>
       </div>
       <div style="display:flex;border-bottom:1px solid var(--border);margin-bottom:16px">
         <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">登录</button>
@@ -780,6 +895,12 @@ input,textarea{font-family:inherit}
     <div class="nav-footer">
       <a href="/" class="nav-footer-item"><span>←</span><span>返回首页</span></a>
       <div class="nav-footer-item" style="cursor:default"><span>?</span><span>帮助与支持</span></div>
+      <div id="navBeian" style="padding:8px 16px 2px;display:flex;flex-direction:column;gap:3px">
+        <a href="https://beian.miit.gov.cn" target="_blank" rel="noopener"
+           style="color:var(--muted);text-decoration:none;font-size:.62rem">苏ICP备2026046699号</a>
+        <a href="https://beian.mps.gov.cn/#/query/webSearch?recordcode=32010402002567" target="_blank" rel="noopener"
+           style="color:var(--muted);text-decoration:none;font-size:.62rem">苏公网安备32010402002567号</a>
+      </div>
     </div>
   </aside>
 
@@ -857,19 +978,50 @@ input,textarea{font-family:inherit}
     <!-- ─── Page: 论文撰写 ─── -->
     <div class="page" id="page-write">
       <div class="page-header">
-        <span class="page-title">✍️ 论文撰写</span>
+        <span class="page-title" id="writePageTitle">📝 论文撰写 · 第一步：目录规划</span>
         <div class="page-actions">
           <span class="write-doc-badge">已选 <strong id="writeDocCount">0</strong> 篇文献</span>
         </div>
       </div>
+      <div class="write-plan-subtitle" id="writePlanSubtitle">先确定论文结构，确认后进入逐章写作。确认后目录不可再修改</div>
       <div class="write-meta-bar">
-        <input class="write-topic-input" id="writeTopic" placeholder="综述主题（可选，例：基于深度学习的医学图像分析）">
+        <input class="write-topic-input" id="writeTopic" placeholder="论文主题（可选，例：基于深度学习的医学图像分析）">
+        <button class="abtn abtn-gold" id="writeOutlineBtn" onclick="aiGenerateOutline()">⚡ AI 生成目录</button>
       </div>
-      <div class="write-sections-body" id="writeSectionsList"></div>
-      <div class="write-footer-bar">
-        <button class="abtn abtn-gold" onclick="generateAllSections()">⚡ 一键生成全文</button>
-        <button class="abtn abtn-ghost" onclick="exportPaper()">📥 导出全文 (.txt)</button>
-        <button class="abtn abtn-ghost" onclick="clearAllSections()">🗑 清空内容</button>
+
+      <!-- 阶段一：目录规划 -->
+      <div class="write-plan-stage" id="writePlanStage">
+        <div id="writePlanTree"></div>
+        <div class="write-plan-actions">
+          <button class="abtn abtn-ghost" onclick="regeneratePlan()">🔄 重新生成目录</button>
+          <span class="plan-confirm-hint">确认后进入写作，目录将锁定不可修改</span>
+          <button class="abtn abtn-gold" onclick="confirmPlan()">✓ 确认目录，开始写作</button>
+        </div>
+      </div>
+
+      <!-- 阶段二：单章节写作 -->
+      <div class="mod-layout" id="writeWriteStage" style="display:none;flex:1;overflow:hidden">
+        <nav class="mod-side write-toc-side" id="writeStageToc"></nav>
+        <div class="mod-main">
+          <div class="write-section-header" id="writeSectionHeader"></div>
+          <div class="write-section-hint" id="writeSectionHint"></div>
+          <div id="writeExtRefBlock" style="margin:10px 20px 0;display:none">
+            <div class="ext-ref-toggle" onclick="toggleWriteExtRef()">
+              <span>📚 外部引用文献（可选，摘要将作为本章补充背景）</span>
+              <span id="writeExtRefChevron">▸</span>
+            </div>
+            <div class="ext-ref-body" id="writeExtRefList" style="display:none"></div>
+          </div>
+          <textarea class="ws-content" id="writeSectionTextarea"
+            placeholder="点击右上「⚡ 生成」让 AI 撰写本章，或在此直接手动编写…"
+            oninput="onWriteTextareaInput(this)" style="margin:14px 20px;flex:1"></textarea>
+          <div class="write-footer-bar">
+            <button class="abtn abtn-gold" onclick="generateAllSections()">⚡ 一键生成全文</button>
+            <button class="abtn abtn-ghost" onclick="exportPaper()">📥 导出全文 (.txt)</button>
+            <button class="abtn abtn-ghost" onclick="clearAllSections()">🗑 清空内容</button>
+            <button class="abtn abtn-ghost" onclick="startNewPaper()">🔄 再写一篇</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -911,23 +1063,66 @@ input,textarea{font-family:inherit}
             </div>
           </div>
 
+          <!-- 外部引用文献 -->
+          <div class="rev-text-section">
+            <button class="rev-text-toggle" id="revExtRefToggle" onclick="toggleRevExtRef()">
+              <span>📚 外部引用文献（可选）</span>
+              <span id="revExtRefChevron">▸</span>
+            </button>
+            <div class="rev-text-body" id="revExtRefBody">
+              <div class="ext-ref-body" id="revExtRefList" style="max-height:180px"></div>
+              <button class="abtn abtn-ghost" style="font-size:.68rem;padding:4px 10px;align-self:flex-start"
+                onclick="appendExtRefAbstracts()">摘要追加到参考资料</button>
+            </div>
+          </div>
+
+          <!-- 综述结构模块编辑器 -->
+          <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+            <div class="mod-section-label">综述结构模块（勾选启用，可排序改名）</div>
+            <div id="revModList"></div>
+            <div class="mod-add">
+              <input id="revModInput" placeholder="自定义模块，如：政策梳理"
+                onkeydown="if(event.key==='Enter')modAdd('revModList')">
+              <button class="abtn abtn-ghost" style="font-size:.68rem;padding:4px 10px" onclick="modAdd('revModList')">＋</button>
+            </div>
+          </div>
+
           <!-- Controls below doc list -->
           <div class="rev-controls">
             <div class="rev-controls-label">综述主题（可选，不填则自动归纳）</div>
             <input class="rev-topic-input" id="reviewTopic" placeholder="例：基于深度学习的医学图像分析">
             <div class="rev-btn-row">
-              <button class="abtn abtn-gold" onclick="startReview()">📝 生成综述</button>
+              <button class="abtn abtn-gold" id="reviewGenBtn" onclick="startReview()">📝 生成综述</button>
+              <button class="abtn abtn-ghost" id="reviewCancelBtn" onclick="cancelReview()" style="display:none">⏹ 停止</button>
               <button class="abtn abtn-ghost" onclick="copyReview()">📋 复制</button>
               <button class="abtn abtn-ghost" onclick="exportReview()">📥 导出</button>
               <button class="abtn abtn-ghost" onclick="clearReview()">🗑</button>
             </div>
+            <div class="rev-btn-row" style="margin-top:6px">
+              <button class="abtn abtn-ghost" onclick="generateReviewRefs()">📚 生成参考文献</button>
+            </div>
             <div id="reviewStatus" style="font-size:.72rem;color:var(--muted);min-height:1em"></div>
           </div>
         </div>
-        <!-- Right: result only -->
+        <!-- Right: TOC + result -->
         <div class="review-main">
-          <div class="review-result" id="reviewResult">
-            <div class="review-empty-tip">从左侧勾选文献并输入主题，点击「生成综述」开始自动撰写</div>
+          <div class="mod-layout" style="grid-template-columns:170px 1fr">
+            <nav class="mod-side" id="reviewToc" style="padding:14px 10px">
+              <div style="font-size:.68rem;color:var(--muted);padding:0 8px 6px">目录（生成后自动出现）</div>
+            </nav>
+            <div class="mod-main" style="padding:20px 24px" id="reviewResult">
+              <div class="review-empty-tip">从左侧勾选文献并输入主题，点击「生成综述」开始自动撰写</div>
+            </div>
+          </div>
+          <div class="refs-box" id="reviewRefsBox" style="display:none">
+            <div class="refs-box-title">
+              <span>📚 参考文献</span>
+              <span style="display:flex;gap:8px">
+                <button class="abtn abtn-ghost" style="font-size:.68rem;padding:3px 8px" onclick="copyReviewRefs()">📋 复制</button>
+                <button class="abtn abtn-ghost" style="font-size:.68rem;padding:3px 8px" onclick="document.getElementById('reviewRefsBox').style.display='none'">✕</button>
+              </span>
+            </div>
+            <div class="refs-box-content" id="reviewRefsContent"></div>
           </div>
         </div>
       </div>
@@ -1239,8 +1434,8 @@ let authMode       = 'login';
 // ── 套餐限额（与 config.py PLAN_LIMITS 保持一致）──
 const PLAN_LIMITS = {
   free: { maxTokens:2048, reviewMaxDocs:3,  reduceMaxWords:800,  dailyQuery:20,  pdfLimit:5   },
-  plus: { maxTokens:4096, reviewMaxDocs:10, reduceMaxWords:3000, dailyQuery:100, pdfLimit:30  },
-  pro:  { maxTokens:8192, reviewMaxDocs:20, reduceMaxWords:10000,dailyQuery:999999,pdfLimit:100},
+  plus: { maxTokens:4096, reviewMaxDocs:20, reduceMaxWords:3000, dailyQuery:50,  pdfLimit:30  },
+  pro:  { maxTokens:8192, reviewMaxDocs:50, reduceMaxWords:10000,dailyQuery:100, pdfLimit:100},
   enterprise:{ maxTokens:8192,reviewMaxDocs:20,reduceMaxWords:10000,dailyQuery:999999,pdfLimit:500},
 };
 function getPlanLimits(){ return PLAN_LIMITS[currentUser?.plan] || PLAN_LIMITS.free; }
@@ -1249,6 +1444,7 @@ function isPaid(){ return ['plus','pro','enterprise'].includes(currentUser?.plan
 function planLabel(p){ return {free:'免费版',plus:'基础版(¥9.9)',pro:'专业版(¥19.9)',enterprise:'机构版',custom:'专属尊享版'}[p]||'免费版'; }
 let selectedDocs   = new Set();   // for Q&A + writing
 let reviewDocs     = new Set();   // for 文献综述 page (independent)
+let lastSearchResults = [];       // 文献检索最近一次结果（含 authors/year/venue/abstract 等完整元数据）
 let libSelected    = new Set();   // for batch delete in library
 let allDocs        = [];
 let isAsking       = false;
@@ -1429,7 +1625,7 @@ function _handleVerifyParam(){
   // 清除 URL 参数，避免刷新重复提示
   history.replaceState(null,'', window.location.pathname);
   if(v==='ok'){
-    showToast('✅ 邮箱验证成功！欢迎使用 DocMind', 'success');
+    showToast('✅ 邮箱验证成功！欢迎使用慧策智写', 'success');
     if(currentUser) currentUser.email_verified = true;
     const banner = document.getElementById('verify-banner');
     if(banner) banner.style.display = 'none';
@@ -2498,6 +2694,62 @@ function clearRevText(){
   updateRevTextMeta();
 }
 
+/* ── 综述结构模块状态 ── */
+let reviewModules = [
+  {id:'bg',     label:'研究背景与意义',       on:true},
+  {id:'method', label:'核心方法与技术路线对比', on:true},
+  {id:'finding',label:'主要研究发现',         on:true},
+  {id:'data',   label:'数据集与实验设置',      on:false},
+  {id:'gap',    label:'研究不足与争议',       on:true},
+  {id:'future', label:'未来研究方向',         on:true},
+];
+let reviewRawText = '';
+let reviewAbort = null;
+let reviewExtRefIds = new Set();  // 综述页勾选的引用列表下标（摘要补充 + 参考文献汇总共用）
+let reviewRefsText = '';
+
+function initReviewModules(){
+  modRenderEditor(reviewModules, 'revModList', 'revModInput', ()=>{});
+}
+
+function toggleRevExtRef(){
+  const body    = document.getElementById('revExtRefBody');
+  const chevron = document.getElementById('revExtRefChevron');
+  const toggle  = document.getElementById('revExtRefToggle');
+  const open    = body.classList.toggle('open');
+  chevron.textContent = open ? '▾' : '▸';
+  toggle.classList.toggle('active', open);
+  if(open) renderExtRefPicker('revExtRefList', reviewExtRefIds, ()=>{});
+}
+
+function appendExtRefAbstracts(){
+  const text = buildExtraContextText(reviewExtRefIds);
+  if(!text){ alert('请先勾选带摘要的外部文献'); return; }
+  const ta = document.getElementById('revExtraText');
+  ta.value = ta.value.trim() ? ta.value.trim()+'\n\n'+text : text;
+  updateRevTextMeta();
+  showToast('已追加到参考资料');
+}
+
+async function generateReviewRefs(){
+  const docIds = reviewDocs.size>0 ? [...reviewDocs] : allDocs.filter(d=>d.status==='ready').map(d=>d.doc_id);
+  const extRefs = JSON.parse(sessionStorage.getItem('refList')||'[]');
+  if(!docIds.length && !extRefs.length){ alert('请先勾选文献，或在「文献检索」页收藏外部引用'); return; }
+  const box = document.getElementById('reviewRefsBox');
+  const content = document.getElementById('reviewRefsContent');
+  box.style.display=''; content.textContent='汇总中…';
+  try{
+    reviewRefsText = await buildReferenceList(docIds);
+    content.textContent = reviewRefsText || '未能获取到文献引用信息';
+  }catch(err){
+    content.textContent = '汇总失败：'+err.message;
+  }
+}
+function copyReviewRefs(){
+  if(!reviewRefsText){ alert('请先点「生成参考文献」'); return; }
+  navigator.clipboard.writeText(reviewRefsText).then(()=>showToast('已复制到剪贴板'));
+}
+
 async function startReview(){
   if(reviewStreaming){alert('正在生成中，请稍候');return;}
   const docIds     = reviewDocs.size>0 ? [...reviewDocs] : allDocs.filter(d=>d.status==='ready').map(d=>d.doc_id);
@@ -2514,19 +2766,37 @@ async function startReview(){
   const sourceDesc = docIds.length && extraText ? `${docIds.length} 篇文献及附加参考资料`
     : docIds.length ? `${docIds.length} 篇文献`
     : '参考资料';
-  const q = topic
+
+  const mods = reviewModules.filter(m=>m.on).map(m=>m.label);
+  let structReq = '';
+  if(mods.length){
+    structReq = `\n\n要求：综述必须严格按以下章节结构组织，每个章节以 Markdown 二级标题（## 章节名）开头，标题文字与下列名称完全一致，不要增删章节：\n`
+      + mods.map((m,i)=>`${i+1}. ${m}`).join('\n');
+  }else{
+    structReq = `\n\n要求：每个主要章节以 Markdown 二级标题（## 章节名）开头。`;
+  }
+  const q = (topic
     ? `请基于${sourceDesc}，围绕「${topic}」撰写一篇详细的学术文献综述`
-    : `请基于${sourceDesc}，撰写一篇学术文献综述`;
+    : `请基于${sourceDesc}，撰写一篇学术文献综述`) + structReq;
+
   const resultEl=document.getElementById('reviewResult');
+  const tocEl=document.getElementById('reviewToc');
   const statusEl=document.getElementById('reviewStatus');
   reviewStreaming=true;
+  reviewRawText='';
+  document.getElementById('reviewGenBtn').style.display='none';
+  document.getElementById('reviewCancelBtn').style.display='';
+  resultEl.classList.remove('review-body-fmt');
   resultEl.textContent='';
+  tocEl.innerHTML='<div style="font-size:.68rem;color:var(--muted);padding:0 8px">生成中…</div>';
   statusEl.textContent='▌ 正在生成综述…';
   let fullText='';
+  reviewAbort = new AbortController();
   try{
     const res=await authFetch(`${API}/api/ask/stream`,{method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({question:q,doc_ids:docIds,section:'',task_hint:'review',extra_context:extraText})});
+      body:JSON.stringify({question:q,doc_ids:docIds,section:'',task_hint:'review',extra_context:extraText}),
+      signal: reviewAbort.signal});
     if(!res.ok) throw new Error(`HTTP ${res.status}`);
     const reader=res.body.getReader(),decoder=new TextDecoder();
     while(true){
@@ -2541,18 +2811,35 @@ async function startReview(){
         }catch{}
       }
     }
+    reviewRawText=fullText;
+    modRenderTocFromText(fullText, 'reviewResult', 'reviewToc', '#reviewResult');
     statusEl.textContent=`✦ 生成完成（${fullText.length} 字）`;
     if(currentUser){currentUser.query_count_today=(currentUser.query_count_today||0)+1; updateDspUsage();}
-  }catch(err){ statusEl.textContent='❌ 生成失败：'+err.message; }
-  finally{ reviewStreaming=false; }
+  }catch(err){
+    if(err.name === 'AbortError'){
+      reviewRawText = fullText;
+      if(fullText){ modRenderTocFromText(fullText, 'reviewResult', 'reviewToc', '#reviewResult'); }
+      statusEl.textContent = `⏹ 已停止（保留 ${fullText.length} 字）`;
+    }else{
+      statusEl.textContent='❌ 生成失败：'+err.message;
+    }
+  }finally{
+    reviewStreaming=false;
+    reviewAbort=null;
+    document.getElementById('reviewGenBtn').style.display='';
+    document.getElementById('reviewCancelBtn').style.display='none';
+  }
+}
+function cancelReview(){
+  if(reviewAbort) reviewAbort.abort();
 }
 function copyReview(){
-  const t=document.getElementById('reviewResult').textContent.trim();
+  const t=reviewRawText.trim()||document.getElementById('reviewResult').textContent.trim();
   if(!t){alert('尚未生成内容');return;}
   navigator.clipboard.writeText(t).then(()=>alert('已复制到剪贴板'));
 }
 function exportReview(){
-  const t=document.getElementById('reviewResult').textContent.trim();
+  const t=reviewRawText.trim()||document.getElementById('reviewResult').textContent.trim();
   if(!t){alert('尚未生成内容');return;}
   const topic=document.getElementById('reviewTopic').value.trim()||'文献综述';
   const blob=new Blob([t],{type:'text/plain;charset=utf-8'});
@@ -2560,9 +2847,15 @@ function exportReview(){
   a.download=`${topic.slice(0,30)}_综述.txt`; a.click(); URL.revokeObjectURL(a.href);
 }
 function clearReview(){
-  document.getElementById('reviewResult').innerHTML='<div class="review-empty-tip">选中左侧文献后，点击「生成综述」开始自动撰写学术综述文本</div>';
-  document.getElementById('reviewStatus').textContent='';
+  reviewRawText='';
+  const resultEl=document.getElementById('reviewResult');
+  resultEl.classList.remove('review-body-fmt');
+  resultEl.innerHTML='<div class="review-empty-tip">选中左侧文献、设定结构模块后，点击「生成综述」开始自动撰写</div>';
+  document.getElementById('reviewToc').innerHTML='<div style="font-size:.68rem;color:var(--muted);padding:0 8px 6px">目录（生成后自动出现）</div>';
 }
+
+// 页面初始化：加一次调用
+initReviewModules();
 
 // ══════════════════════════════════════════════════════════════
 // Account page
@@ -2722,7 +3015,8 @@ async function doLitSearch(){
     }
 
     status.textContent = `找到 ${data.total} 篇文献，按引用数排序`;
-    resDiv.innerHTML = data.results.map((r,i) => _renderSearchResult(r,i)).join('');
+    lastSearchResults = data.results || [];
+    resDiv.innerHTML = lastSearchResults.map((r,i) => _renderSearchResult(r,i)).join('');
 
     if(!data.results.length){
       resDiv.innerHTML = `<div style="color:var(--muted);text-align:center;padding:40px;font-size:.88rem">
@@ -2767,10 +3061,10 @@ function _renderSearchResult(r, idx){
       ${srcTag} ${citeTag}
       <div style="flex:1"></div>
       ${doiLink}
-      <button onclick="copyApa(${idx})" data-apa="${escAttr(r.apa||'')}"
+      <button onclick="copyApa(${idx})"
         style="font-size:.73rem;padding:3px 10px;border-radius:5px;border:1px solid var(--border);
                background:transparent;color:var(--fg);cursor:pointer">📋 复制 APA</button>
-      <button onclick="addToRefList(${idx})" data-apa="${escAttr(r.apa||'')}" data-title="${escAttr(r.title||'')}"
+      <button onclick="addToRefList(${idx})"
         style="font-size:.73rem;padding:3px 10px;border-radius:5px;border:1px solid rgba(201,168,76,.3);
                background:transparent;color:var(--gold);cursor:pointer">+ 加入引用</button>
     </div>
@@ -2780,20 +3074,20 @@ function _renderSearchResult(r, idx){
 function escAttr(s){ return (s||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
 function copyApa(idx){
-  // 每个结果卡片有2个 data-apa 元素（复制按钮 + 加入按钮），取第 idx*2 个
-  const btns = document.querySelectorAll('#searchResults [data-apa]');
-  const apa  = btns[idx*2]?.dataset.apa || '';
+  const apa = lastSearchResults[idx]?.apa || '';
   navigator.clipboard.writeText(apa).then(()=>showToast('APA 格式已复制'));
 }
 
 function addToRefList(idx){
-  const btns  = document.querySelectorAll('[data-title]');
-  const btn   = btns[idx];
-  const title = btn?.dataset.title || '';
-  const apa   = btn?.dataset.apa  || '';
+  const r = lastSearchResults[idx];
+  if(!r) return;
   let refs = JSON.parse(sessionStorage.getItem('refList')||'[]');
-  if(!refs.find(r=>r.apa===apa)){
-    refs.push({title, apa});
+  if(!refs.find(x=>x.apa===r.apa)){
+    refs.push({
+      title: r.title||'', apa: r.apa||'',
+      authors: r.authors||[], year: r.year||'', venue: r.venue||'',
+      doi: r.doi||'', url: r.url||'', abstract: r.abstract||'',
+    });
     sessionStorage.setItem('refList', JSON.stringify(refs));
     showToast('已加入引用列表');
     renderRefList();
@@ -3106,15 +3400,229 @@ function formatCitation(meta, style){
 }
 
 // ══════════════════════════════════════════════════════════════
-// Writing module
+// 外部引用文献（文献检索"引用列表"）与 综述/论文撰写 打通
 // ══════════════════════════════════════════════════════════════
-const WRITE_SECTIONS=[
+
+/**
+ * 渲染"引用列表"勾选器（综述页/论文撰写页共用）
+ * @param {string} containerId 承载列表的容器 id
+ * @param {Set<number>} selSet 已选中的 refList 下标集合（原地修改）
+ * @param {Function} onChange 勾选变化后的回调
+ */
+function renderExtRefPicker(containerId, selSet, onChange){
+  const box=document.getElementById(containerId);
+  if(!box) return;
+  const refs=JSON.parse(sessionStorage.getItem('refList')||'[]');
+  if(!refs.length){
+    box.innerHTML='<div class="ext-ref-empty">引用列表为空，请先在「文献检索」页收藏外部文献</div>';
+    return;
+  }
+  box.innerHTML=refs.map((r,i)=>`
+    <label class="ext-ref-item">
+      <input type="checkbox" ${selSet.has(i)?'checked':''} data-idx="${i}">
+      <div class="ext-ref-info">
+        <div class="ext-ref-title">${modEsc(r.title||'未命名文献')}</div>
+        <div class="ext-ref-meta">${modEsc((r.authors||[]).slice(0,3).join('; '))}${r.year?` · ${r.year}`:''}</div>
+      </div>
+    </label>`).join('');
+  box.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    cb.onchange=()=>{
+      const idx=Number(cb.dataset.idx);
+      if(cb.checked) selSet.add(idx); else selSet.delete(idx);
+      onChange();
+    };
+  });
+}
+
+/** 把选中的外部文献摘要拼成一段补充文本，用于生成时的 extra_context */
+function buildExtraContextText(selSet){
+  if(!selSet || !selSet.size) return '';
+  const refs=JSON.parse(sessionStorage.getItem('refList')||'[]');
+  const parts=[];
+  selSet.forEach(i=>{
+    const r=refs[i]; if(!r || !r.abstract) return;
+    parts.push(`《${r.title||''}》（${(r.authors||[]).slice(0,2).join('、')}, ${r.year||''}）：${r.abstract}`);
+  });
+  return parts.join('\n\n');
+}
+
+/**
+ * 汇总参考文献列表（GB/T 7714）：已上传 PDF（走 /cite 接口取真实元数据）+ 引用列表里的全部外部文献
+ * @param {string[]} docIds 已选 PDF 文献 id
+ * @returns {Promise<string>} 编号后的参考文献文本
+ */
+async function buildReferenceList(docIds){
+  const lines=[];
+  let n=0;
+  for(const docId of (docIds||[])){
+    let meta=citeMetaCache[docId];
+    if(!meta){
+      try{
+        const res=await authFetch(`${API}/api/documents/${docId}/cite`);
+        if(res.ok){ meta=await res.json(); citeMetaCache[docId]=meta; }
+      }catch{}
+    }
+    if(meta){ n++; lines.push(`[${n}] ${formatCitation(meta,'gb7714')}`); }
+  }
+  const refs=JSON.parse(sessionStorage.getItem('refList')||'[]');
+  refs.forEach(r=>{ n++; lines.push(`[${n}] ${formatCitation(r,'gb7714')}`); });
+  return lines.join('\n');
+}
+
+// ══════════════════════════════════════════════════════════════
+// 通用模块编辑器 + 目录导航（综述/论文撰写共用）
+// ══════════════════════════════════════════════════════════════
+
+/**
+ * 渲染模块编辑器（勾选/改名/排序/删除/新增）
+ * @param {Array}  modules   [{id,label,hint,on}]，会被原地修改
+ * @param {string} listElId  承载列表的容器 id
+ * @param {string} addInputId 新增输入框 id
+ * @param {Function} onChange 每次修改后的回调（重渲染 TOC / 内容区）
+ */
+function modRenderEditor(modules, listElId, addInputId, onChange){
+  const box = document.getElementById(listElId);
+  if(!box) return;
+  box.innerHTML = modules.map((m,i)=>`
+    <div class="mod-item ${m.on?'':'off'}">
+      <input type="checkbox" ${m.on?'checked':''}
+        onchange="modToggle('${listElId}',${i},this.checked)">
+      <input type="text" value="${modEsc(m.label)}"
+        onchange="modRename('${listElId}',${i},this.value)"
+        onclick="event.stopPropagation()">
+      <span class="mod-btns">
+        <button title="上移" onclick="modMove('${listElId}',${i},-1)">▲</button>
+        <button title="下移" onclick="modMove('${listElId}',${i},1)">▼</button>
+        <button title="删除" onclick="modDelete('${listElId}',${i})">✕</button>
+      </span>
+    </div>`).join('');
+  // 把 modules/onChange 挂到容器上，供事件回调取用（避免全局变量冲突）
+  box._modState = { modules, onChange, addInputId };
+}
+function modEsc(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function modToggle(listElId,i,val){
+  const st=document.getElementById(listElId)._modState;
+  st.modules[i].on=val; modRenderEditor(st.modules,listElId,st.addInputId,st.onChange);
+  st.onChange();
+}
+function modRename(listElId,i,val){
+  const st=document.getElementById(listElId)._modState;
+  st.modules[i].label=val.trim()||st.modules[i].label;
+  st.onChange();
+}
+function modMove(listElId,i,dir){
+  const st=document.getElementById(listElId)._modState;
+  const j=i+dir; if(j<0||j>=st.modules.length) return;
+  [st.modules[i],st.modules[j]]=[st.modules[j],st.modules[i]];
+  modRenderEditor(st.modules,listElId,st.addInputId,st.onChange);
+  st.onChange();
+}
+function modDelete(listElId,i){
+  const st=document.getElementById(listElId)._modState;
+  if(st.modules.length<=1){ alert('至少保留一个模块'); return; }
+  st.modules.splice(i,1);
+  modRenderEditor(st.modules,listElId,st.addInputId,st.onChange);
+  st.onChange();
+}
+function modAdd(listElId){
+  const st=document.getElementById(listElId)._modState;
+  const inp=document.getElementById(st.addInputId);
+  const v=inp.value.trim(); if(!v) return;
+  if(st.modules.length>=12){ alert('模块最多 12 个'); return; }
+  st.modules.push({ id:'custom-'+Date.now(), label:v, hint:'', on:true });
+  inp.value='';
+  modRenderEditor(st.modules,listElId,st.addInputId,st.onChange);
+  st.onChange();
+}
+
+/**
+ * 渲染目录导航（静态模式：直接用 modules 列表生成锚点，用于论文撰写）
+ * @param {Array}  modules  [{id,label,on}]
+ * @param {string} tocElId  目录容器 id
+ * @param {string} scrollSelector 滚动容器的 CSS 选择器（用于计算高亮）
+ */
+function modRenderTocStatic(modules, tocElId, scrollSelector){
+  const toc = document.getElementById(tocElId);
+  if(!toc) return;
+  const visible = modules.filter(m=>m.on);
+  toc.innerHTML = visible.map(m=>`
+    <a href="javascript:void(0)" data-target="wsi-${m.id}"
+      onclick="modScrollTo('wsi-${m.id}','${scrollSelector}')">${modEsc(m.label)}</a>`).join('');
+  modBindScrollHighlight(visible.map(m=>'wsi-'+m.id), tocElId, scrollSelector);
+}
+
+/**
+ * 渲染目录导航（动态模式：从生成内容的 ## 标题提取，用于综述）
+ * 同时把纯文本渲染成带标题的 HTML，写入 bodyElId
+ * @param {string} text 生成的完整文本
+ * @param {string} bodyElId 正文容器 id
+ * @param {string} tocElId 目录容器 id
+ * @param {string} scrollSelector 滚动容器选择器
+ */
+function modRenderTocFromText(text, bodyElId, tocElId, scrollSelector){
+  const bodyEl = document.getElementById(bodyElId);
+  const tocEl  = document.getElementById(tocElId);
+  const lines = text.split('\n');
+  let html='', toc=[], idx=0;
+  for(const ln of lines){
+    const h3 = ln.match(/^###\s+(.+)/);
+    const h2 = ln.match(/^##\s+(.+)/);
+    if(h3){ const id='rvh-'+(idx++); const t=h3[1].replace(/[#*]/g,'').trim();
+      html+=`<h3 id="${id}">${modEsc(t)}</h3>`; toc.push({id,t,lv:3}); }
+    else if(h2){ const id='rvh-'+(idx++); const t=h2[1].replace(/[#*]/g,'').trim();
+      html+=`<h2 id="${id}">${modEsc(t)}</h2>`; toc.push({id,t,lv:2}); }
+    else if(ln.trim()){ html+=`<p>${modEsc(ln).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')}</p>`; }
+  }
+  bodyEl.innerHTML = html || ('<p>'+modEsc(text)+'</p>');
+  bodyEl.classList.add('review-body-fmt');
+  if(tocEl){
+    if(toc.length){
+      tocEl.innerHTML = toc.map(x=>`
+        <a href="javascript:void(0)" class="${x.lv===3?'' : ''}" data-target="${x.id}"
+          onclick="modScrollTo('${x.id}','${scrollSelector}')">${modEsc(x.t)}</a>`).join('');
+      modBindScrollHighlight(toc.map(x=>x.id), tocElId, scrollSelector);
+    }else{
+      tocEl.innerHTML = '<div style="font-size:.72rem;color:var(--muted);padding:6px 8px">暂无章节标题</div>';
+    }
+  }
+}
+
+function modScrollTo(elId, scrollSelector){
+  const target = document.getElementById(elId);
+  if(target) target.scrollIntoView({behavior:'smooth', block:'start'});
+}
+function modBindScrollHighlight(ids, tocElId, scrollSelector){
+  const container = document.querySelector(scrollSelector);
+  const tocEl = document.getElementById(tocElId);
+  if(!container || !tocEl) return;
+  const handler = ()=>{
+    let cur=null;
+    ids.forEach(id=>{
+      const el=document.getElementById(id);
+      if(el && el.offsetTop - container.scrollTop <= 90) cur=id;
+    });
+    tocEl.querySelectorAll('a').forEach(a=>a.classList.toggle('active', a.dataset.target===cur));
+  };
+  container.onscroll = handler;
+  handler();
+}
+
+// ══════════════════════════════════════════════════════════════
+// Writing module（两阶段：目录规划 → 单章节写作）
+// ══════════════════════════════════════════════════════════════
+
+/* 默认章节（三级：章 → 节 → 要点），目录规划阶段可增删改排序 */
+const WRITE_DEFAULT_MODULES = [
   {id:'intro',   label:'一、引言',       hint:'研究背景、意义、现有研究不足及研究目的'},
   {id:'review',  label:'二、文献综述',   hint:'系统梳理现有研究成果，按主题脉络组织'},
   {id:'method',  label:'三、研究方法',   hint:'涉及的研究方法、数据来源、实验/分析设计'},
   {id:'results', label:'四、结果与分析', hint:'核心研究发现、数据与实验结果'},
   {id:'discuss', label:'五、讨论与结论', hint:'研究意义、局限性、未来研究方向'},
+  {id:'refs',    label:'六、参考文献',   hint:'自动汇总所选文献的标准引用格式（GB/T 7714），无需 AI 撰写'},
 ];
+let writeModules = WRITE_DEFAULT_MODULES.map(m=>({...m, on:true, children:[]}));
+
+/* 固定章节的专属 prompt；自定义章节走通用模板（见 getSectionPrompt） */
 const SECTION_PROMPTS={
   intro:(t,n)=>`请基于以上 ${n} 篇文献，为主题「${t||'该研究领域'}」撰写学术论文的【引言】。包括研究背景、意义、现有研究不足与本研究目的，约500字，学术风格。`,
   review:(t,n)=>`请基于以上 ${n} 篇文献，撰写【文献综述】。系统梳理现有研究，按主题分类，指出各研究贡献与局限，并引用具体文献，约700字。`,
@@ -3122,105 +3630,399 @@ const SECTION_PROMPTS={
   results:(t,n)=>`请基于以上 ${n} 篇文献，提炼【主要研究结果与发现】，包括核心结论、关键数据与实验结果对比，约600字。`,
   discuss:(t,n)=>`请基于以上 ${n} 篇文献，撰写【讨论与结论】，总结主要发现意义、研究局限与未来展望，约500字。`,
 };
+/* 参考文献章节不走 AI 撰写，直接汇总所选文献的真实引用元数据，避免 AI 编造参考文献 */
+function isRefsSection(mod){ return mod.label.includes('参考文献'); }
+function getSectionPrompt(mod, topic, n){
+  let base = SECTION_PROMPTS[mod.id]
+    ? SECTION_PROMPTS[mod.id](topic, n)
+    : `请基于以上 ${n} 篇文献，撰写论文章节「${mod.label}」。内容需与主题「${topic||'该研究领域'}」相关，约500字，学术风格，逻辑清晰。`;
+  if(mod.children && mod.children.length){
+    const outline = mod.children.map(c=>{
+      let s = c.label;
+      if(c.points && c.points.length) s += '\n' + c.points.map(p=>`  ${p.label}`).join('\n');
+      return s;
+    }).join('\n');
+    base += `\n\n要求：本章节需按以下内部结构组织，用 Markdown 三级标题（### 小节名）划分小节：\n${outline}`;
+  }
+  return base;
+}
+
 function updateWriteDocCount(){
   const el=document.getElementById('writeDocCount');
   if(el) el.textContent=selectedDocs.size>0?selectedDocs.size:'全部';
 }
-function initWriteSections(){
-  document.getElementById('writeSectionsList').innerHTML=WRITE_SECTIONS.map((s,i)=>`
-    <div class="ws-item" id="wsi-${s.id}">
-      <div class="ws-head">
-        <span class="ws-num">${i+1}</span>
-        <span class="ws-title">${s.label}</span>
-        <span class="ws-badge" id="wsb-${s.id}" style="display:none"></span>
-        <div class="ws-actions">
-          <button class="abtn abtn-gold" style="font-size:.7rem;padding:3px 10px"
-            id="wsbtn-${s.id}" onclick="generateSection('${s.id}')">⚡ 生成</button>
-          <button class="abtn abtn-ghost" style="font-size:.7rem;padding:3px 8px"
-            onclick="copySection('${s.id}')">📋</button>
-        </div>
-      </div>
-      <div class="ws-progress" id="wsp-${s.id}" style="display:none"></div>
-      <textarea class="ws-content" id="wsc-${s.id}"
-        placeholder="点击「⚡ 生成」让 AI 撰写本节，或在此直接手动编写…\n\n提示：${s.hint}"
-        oninput="autoResizeWs(this)"></textarea>
-    </div>`).join('');
-}
+
 function autoResizeWs(ta){ ta.style.height='auto'; ta.style.height=Math.min(ta.scrollHeight,280)+'px'; }
-async function generateSection(id){
-  if(writingActive){alert('正在生成中，请稍候…');return;}
+
+/* ══ 阶段一：目录规划（三级树编辑器） ══ */
+function initWriteSections(){
+  writeStage = 'plan';
+  writeCurrentSectionId = null;
+  writeSectionContent = {};
+  document.getElementById('writePageTitle').textContent = '📝 论文撰写 · 第一步：目录规划';
+  document.getElementById('writePlanSubtitle').style.display = '';
+  document.getElementById('writeOutlineBtn').style.display = '';
+  document.getElementById('writePlanStage').style.display = '';
+  document.getElementById('writeWriteStage').style.display = 'none';
+  renderPlanTree();
+}
+
+function renderPlanTree(){
+  const box=document.getElementById('writePlanTree');
+  let chapterNum = 0;
+  box.innerHTML = writeModules.map((m,i)=>{
+    if(m.on) chapterNum++;
+    const badge = m.on
+      ? `<span class="plan-chapter-badge">第${chapterNum}章</span>`
+      : `<span class="plan-chapter-badge off">未启用</span>`;
+    return `
+    <div class="plan-l1 ${m.on?'':'plan-l1-off'}">
+      <div class="plan-row">
+        <input type="checkbox" ${m.on?'checked':''} onchange="planToggleL1(${i},this.checked)">
+        ${badge}
+        <input type="text" class="plan-input" value="${modEsc(m.label)}" onchange="planRenameL1(${i},this.value)">
+        <span class="plan-btns">
+          <button title="上移" onclick="planMoveL1(${i},-1)">▲</button>
+          <button title="下移" onclick="planMoveL1(${i},1)">▼</button>
+          <button title="删除" onclick="planDeleteL1(${i})">✕</button>
+        </span>
+      </div>
+      ${(m.children||[]).map((c,j)=>`
+        <div class="plan-l2">
+          <div class="plan-row">
+            <span class="plan-l2-num">${chapterNum||i+1}.${j+1}</span>
+            <input type="text" class="plan-input" value="${modEsc(c.label)}" onchange="planRenameL2(${i},${j},this.value)">
+            <span class="plan-btns">
+              <button title="上移" onclick="planMoveL2(${i},${j},-1)">▲</button>
+              <button title="下移" onclick="planMoveL2(${i},${j},1)">▼</button>
+              <button title="删除" onclick="planDeleteL2(${i},${j})">✕</button>
+            </span>
+          </div>
+          ${(c.points||[]).map((p,k)=>`
+            <div class="plan-l3">
+              <span class="plan-bullet">–</span>
+              <input type="text" class="plan-input" value="${modEsc(p.label)}" onchange="planRenameL3(${i},${j},${k},this.value)">
+              <button class="plan-l3-del" title="删除" onclick="planDeleteL3(${i},${j},${k})">✕</button>
+            </div>`).join('')}
+          <div class="plan-add-row" onclick="planAddL3(${i},${j})">+ 添加要点</div>
+        </div>`).join('')}
+      <div class="plan-add-row" onclick="planAddL2(${i})">+ 添加小节</div>
+    </div>`;
+  }).join('') + `<div class="plan-add-row plan-add-l1" onclick="planAddChapter()">+ 添加大章节</div>`;
+}
+function planToggleL1(i,val){ writeModules[i].on=val; renderPlanTree(); }
+function planRenameL1(i,val){ writeModules[i].label=val.trim()||writeModules[i].label; }
+function planMoveL1(i,dir){
+  const j=i+dir; if(j<0||j>=writeModules.length) return;
+  [writeModules[i],writeModules[j]]=[writeModules[j],writeModules[i]];
+  renderPlanTree();
+}
+function planDeleteL1(i){
+  if(writeModules.length<=1){ alert('至少保留一个大章节'); return; }
+  writeModules.splice(i,1); renderPlanTree();
+}
+function planAddChapter(){
+  if(writeModules.length>=12){ alert('大章节最多 12 个'); return; }
+  writeModules.push({id:'custom-'+Date.now(), label:'新增章节', hint:'', on:true, children:[]});
+  renderPlanTree();
+}
+function planAddL2(i){
+  const m=writeModules[i]; m.children=m.children||[];
+  if(m.children.length>=8){ alert('子章节最多 8 个'); return; }
+  m.children.push({id:m.id+'-c'+Date.now(), label:'新增小节', points:[]});
+  renderPlanTree();
+}
+function planRenameL2(i,j,val){
+  const c=writeModules[i].children[j]; c.label=val.trim()||c.label;
+}
+function planMoveL2(i,j,dir){
+  const arr=writeModules[i].children; const k=j+dir; if(k<0||k>=arr.length) return;
+  [arr[j],arr[k]]=[arr[k],arr[j]]; renderPlanTree();
+}
+function planDeleteL2(i,j){ writeModules[i].children.splice(j,1); renderPlanTree(); }
+function planAddL3(i,j){
+  const c=writeModules[i].children[j]; c.points=c.points||[];
+  if(c.points.length>=8){ alert('要点最多 8 个'); return; }
+  c.points.push({id:c.id+'-p'+Date.now(), label:'新要点'});
+  renderPlanTree();
+}
+function planRenameL3(i,j,k,val){
+  const p=writeModules[i].children[j].points[k]; p.label=val.trim()||p.label;
+}
+function planDeleteL3(i,j,k){ writeModules[i].children[j].points.splice(k,1); renderPlanTree(); }
+
+async function aiGenerateOutline(){
+  const topic=document.getElementById('writeTopic').value.trim();
+  const docIds=selectedDocs.size>0?[...selectedDocs]:allDocs.filter(d=>d.status==='ready').map(d=>d.doc_id);
+  const btn=document.getElementById('writeOutlineBtn');
+  btn.disabled=true; const orig=btn.textContent; btn.textContent='生成中…';
+  try{
+    const res=await authFetch(`${API}/api/write/outline`,{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({topic, doc_ids:docIds})});
+    if(!res.ok){ const e=await res.json().catch(()=>({})); throw new Error(e.detail||`HTTP ${res.status}`); }
+    const data=await res.json();
+    const outline=data.outline||[];
+    if(!outline.length) throw new Error('未返回有效目录');
+    writeModules = outline.map((m,i)=>({
+      id: `ai-${Date.now()}-${i}`,
+      label: m.label || `第${i+1}章`,
+      hint: m.hint || '',
+      on: true,
+      children: (m.children||[]).map((c,j)=>({
+        id: `ai-${Date.now()}-${i}-${j}`,
+        label: c.label || '',
+        points: (c.points||[]).map((p,k)=>({
+          id: `ai-${Date.now()}-${i}-${j}-${k}`,
+          label: typeof p==='string' ? p : (p.label||''),
+        })),
+      })),
+    }));
+    renderPlanTree();
+  }catch(err){
+    alert('目录生成失败：'+err.message);
+  }finally{
+    btn.disabled=false; btn.textContent=orig;
+  }
+}
+
+function regeneratePlan(){
+  if(!confirm('确认重新生成目录？当前编辑的结构将被覆盖。')) return;
+  aiGenerateOutline();
+}
+
+function confirmPlan(){
+  const enabled = writeModules.filter(m=>m.on);
+  if(!enabled.length){ alert('请至少启用一个大章节'); return; }
+  if(!confirm('确认目录后将无法修改章节结构，是否继续？')) return;
+  writeStage = 'write';
+  document.getElementById('writePageTitle').textContent = '✍️ 论文撰写 · 第二步：逐章写作';
+  document.getElementById('writePlanSubtitle').style.display = 'none';
+  document.getElementById('writeOutlineBtn').style.display = 'none';
+  document.getElementById('writePlanStage').style.display = 'none';
+  document.getElementById('writeWriteStage').style.display = '';
+  writeCurrentSectionId = enabled[0].id;
+  renderCurrentSection();
+}
+
+/* ══ 阶段二：单章节写作 ══ */
+let writeSectionContent = {};  // {sectionId: text} —— 未渲染到 DOM 的章节内容持久化在这里
+let writeAborts = {};          // { sectionId: AbortController }
+let writeBatchCancel = false;  // 一键生成批量流程的中止标志
+let writeStage = 'plan';
+let writeCurrentSectionId = null;
+let writeExtRefSelections = {}; // {sectionId: Set<refList下标>} —— 各章节独立选择的外部引用摘要
+let writeExtRefOpen = false;
+
+function renderWriteStageToc(){
+  const box=document.getElementById('writeStageToc');
+  const enabled=writeModules.filter(m=>m.on);
+  box.innerHTML = enabled.map((m,i)=>{
+    const hasContent = (writeSectionContent[m.id]||'').trim().length>0;
+    const children = (m.children||[]).map(c=>`
+      <div class="toc-l2">${modEsc(c.label)}</div>
+      ${(c.points||[]).map(p=>`<div class="toc-l3">${modEsc(p.label)}</div>`).join('')}
+    `).join('');
+    return `
+      <div class="toc-l1-item ${m.id===writeCurrentSectionId?'active':''} ${writingActive?'disabled':''}"
+        onclick="${writingActive?'':`switchSection('${m.id}')`}">
+        <div class="toc-l1-head">
+          <span class="toc-num">${String(i+1).padStart(2,'0')}</span>
+          <span class="toc-l1-label">${modEsc(m.label)}</span>
+        </div>
+        <div class="toc-status">${hasContent?'✓ 已有内容':'未开始'}</div>
+        ${children}
+      </div>`;
+  }).join('');
+}
+
+function renderCurrentSection(){
+  const m = writeModules.find(x=>x.id===writeCurrentSectionId);
+  if(!m) return;
+  const enabled = writeModules.filter(x=>x.on);
+  const idx = enabled.findIndex(x=>x.id===m.id);
+  const outlineHtml = (m.children||[]).map(c=>`
+    <div>${modEsc(c.label)}</div>
+    ${(c.points||[]).map(p=>`<div style="padding-left:14px">${modEsc(p.label)}</div>`).join('')}
+  `).join('');
+  const refs = isRefsSection(m);
+  document.getElementById('writeSectionHeader').innerHTML = `
+    <span class="ws-num">第 ${idx+1} 章</span>
+    <span class="ws-title">${modEsc(m.label)}</span>
+    <button class="abtn abtn-gold" id="writeGenBtn" onclick="generateCurrentSection()">${refs?'📑 汇总参考文献':'⚡ 生成'}</button>
+    <button class="abtn abtn-ghost" onclick="copyCurrentSection()">📋 复制</button>
+  `;
+  document.getElementById('writeSectionHint').innerHTML = refs
+    ? `<div>本章不使用 AI 撰写，将直接汇总左侧已勾选文献的真实引用信息（GB/T 7714 格式），避免 AI 编造参考文献。</div>`
+    : `<div>写作提示：${modEsc(m.hint||'')}</div>
+       ${outlineHtml?`<div>本节大纲：${outlineHtml}</div>`:''}`;
+
+  const extBlock = document.getElementById('writeExtRefBlock');
+  if(refs){
+    extBlock.style.display='none';
+  }else{
+    extBlock.style.display='';
+    if(!writeExtRefSelections[m.id]) writeExtRefSelections[m.id]=new Set();
+    document.getElementById('writeExtRefChevron').textContent = writeExtRefOpen ? '▾' : '▸';
+    document.getElementById('writeExtRefList').style.display = writeExtRefOpen ? '' : 'none';
+    renderExtRefPicker('writeExtRefList', writeExtRefSelections[m.id], ()=>{});
+  }
+
+  const ta=document.getElementById('writeSectionTextarea');
+  ta.value = writeSectionContent[m.id] || '';
+  autoResizeWs(ta);
+  renderWriteStageToc();
+}
+
+function toggleWriteExtRef(){
+  writeExtRefOpen = !writeExtRefOpen;
+  document.getElementById('writeExtRefChevron').textContent = writeExtRefOpen ? '▾' : '▸';
+  document.getElementById('writeExtRefList').style.display = writeExtRefOpen ? '' : 'none';
+  if(writeExtRefOpen && writeCurrentSectionId){
+    renderExtRefPicker('writeExtRefList', writeExtRefSelections[writeCurrentSectionId], ()=>{});
+  }
+}
+
+function switchSection(id){
+  if(writingActive) return;
+  const ta=document.getElementById('writeSectionTextarea');
+  if(ta && writeCurrentSectionId) writeSectionContent[writeCurrentSectionId]=ta.value;
+  writeCurrentSectionId=id;
+  renderCurrentSection();
+}
+
+function onWriteTextareaInput(ta){
+  autoResizeWs(ta);
+  if(writeCurrentSectionId) writeSectionContent[writeCurrentSectionId]=ta.value;
+  renderWriteStageToc();
+}
+
+async function generateCurrentSection(){
+  const id=writeCurrentSectionId;
+  if(writeAborts[id]){ writeAborts[id].abort(); return; }
+  if(writingActive){ alert('正在批量生成中，如需取消请点当前的「停止」按钮'); return; }
+  const mod=writeModules.find(m=>m.id===id);
+  if(!mod) return;
+  if(isRefsSection(mod)){ return generateReferencesSection(mod); }
   const docIds=selectedDocs.size>0?[...selectedDocs]:allDocs.filter(d=>d.status==='ready').map(d=>d.doc_id);
   if(!docIds.length){alert('请先上传并选择文献');return;}
   const topic=document.getElementById('writeTopic').value.trim();
-  const prompt=SECTION_PROMPTS[id](topic,docIds.length);
-  const btn=document.getElementById(`wsbtn-${id}`);
-  const badge=document.getElementById(`wsb-${id}`);
-  const progress=document.getElementById(`wsp-${id}`);
-  const ta=document.getElementById(`wsc-${id}`);
-  writingActive=true; btn.disabled=true; btn.textContent='生成中…';
-  badge.className='ws-badge ws-badge-gen'; badge.textContent='生成中'; badge.style.display='';
-  progress.style.display='block'; progress.textContent='▌ AI 正在撰写…';
-  ta.value=''; autoResizeWs(ta);
+  const prompt=getSectionPrompt(mod, topic, docIds.length);
+  const extraContext=buildExtraContextText(writeExtRefSelections[id]);
+  const btn=document.getElementById('writeGenBtn');
+  const ta=document.getElementById('writeSectionTextarea');
+
+  writingActive=true;
+  btn.textContent='⏹ 停止'; btn.classList.remove('abtn-gold'); btn.classList.add('abtn-ghost');
+  ta.value=''; writeSectionContent[id]=''; autoResizeWs(ta);
+  renderWriteStageToc();
+
+  const ac=new AbortController();
+  writeAborts[id]=ac;
+  let text='';
   try{
     const res=await authFetch(`${API}/api/ask/stream`,{method:'POST',
-      headers:{'Content-Type':'application/json'},body:JSON.stringify({question:prompt,doc_ids:docIds,section:'',task_hint:'writing'})});
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({question:prompt,doc_ids:docIds,section:'',task_hint:'writing',extra_context:extraContext}),
+      signal: ac.signal});
     if(!res.ok) throw new Error(`HTTP ${res.status}`);
     const reader=res.body.getReader(),decoder=new TextDecoder();
-    let text='',rafPending=false;
+    let rafPending=false;
     while(true){
       const{done,value}=await reader.read(); if(done) break;
       for(const line of decoder.decode(value).split('\n')){
         if(!line.startsWith('data: ')) continue;
         const raw=line.slice(6).trim(); if(raw==='[DONE]') break;
         try{ const obj=JSON.parse(raw);
-          if(obj.type==='text'){ text+=obj.text; ta.value=text;
+          if(obj.type==='text'){ text+=obj.text; ta.value=text; writeSectionContent[id]=text;
             if(!rafPending){rafPending=true;requestAnimationFrame(()=>{autoResizeWs(ta);rafPending=false;});}
           }
         }catch{}
       }
     }
-    badge.className='ws-badge ws-badge-done'; badge.textContent='✓ 已生成';
-    progress.style.display='none';
     if(currentUser){currentUser.query_count_today=(currentUser.query_count_today||0)+1;}
   }catch(err){
-    badge.className='ws-badge ws-badge-err'; badge.textContent='失败';
-    progress.textContent='❌ 生成失败：'+err.message;
+    if(err.name==='AbortError'){
+      writeBatchCancel=true;   // 批量生成时后续章节不再继续
+    }else{
+      alert('生成失败：'+err.message);
+    }
   }finally{
-    writingActive=false; btn.disabled=false; btn.textContent='⚡ 重新生成';
+    delete writeAborts[id];
+    writingActive = Object.keys(writeAborts).length>0;
+    if(writeCurrentSectionId===id){
+      const b=document.getElementById('writeGenBtn');
+      if(b){ b.textContent='⚡ 重新生成'; b.classList.remove('abtn-ghost'); b.classList.add('abtn-gold'); }
+    }
+    renderWriteStageToc();
+  }
+}
+async function generateReferencesSection(mod){
+  const id=mod.id;
+  const docIds=selectedDocs.size>0?[...selectedDocs]:allDocs.filter(d=>d.status==='ready').map(d=>d.doc_id);
+  const extRefs=JSON.parse(sessionStorage.getItem('refList')||'[]');
+  if(!docIds.length && !extRefs.length){alert('请先上传并选择文献，或在「文献检索」页收藏外部引用');return;}
+  const btn=document.getElementById('writeGenBtn');
+  const ta=document.getElementById('writeSectionTextarea');
+  writingActive=true;
+  btn.disabled=true; btn.textContent='汇总中…';
+  ta.value=''; writeSectionContent[id]=''; autoResizeWs(ta);
+  renderWriteStageToc();
+  try{
+    const text=await buildReferenceList(docIds);
+    ta.value=text; writeSectionContent[id]=text; autoResizeWs(ta);
+    if(!text) alert('未能获取到文献引用信息，请检查左侧是否已勾选文献');
+  }catch(err){
+    alert('参考文献汇总失败：'+err.message);
+  }finally{
+    writingActive=false;
+    btn.disabled=false; btn.textContent='📑 汇总参考文献';
+    renderWriteStageToc();
   }
 }
 async function generateAllSections(){
   if(writingActive){alert('正在生成中，请稍候…');return;}
-  for(const s of WRITE_SECTIONS){ await generateSection(s.id); await new Promise(r=>setTimeout(r,500)); }
+  writeBatchCancel=false;
+  const enabled=writeModules.filter(m=>m.on);
+  for(const m of enabled){
+    if(writeBatchCancel) break;
+    switchSection(m.id);
+    await generateCurrentSection();
+    if(writeBatchCancel) break;
+    await new Promise(r=>setTimeout(r,500));
+  }
 }
-function copySection(id){
-  const ta=document.getElementById(`wsc-${id}`);
-  if(!ta.value.trim()){alert('该章节尚未生成内容');return;}
-  navigator.clipboard.writeText(ta.value).then(()=>{
-    const btn=document.querySelector(`#wsi-${id} .ws-actions button:last-child`);
-    const orig=btn.textContent; btn.textContent='✅';
-    setTimeout(()=>btn.textContent=orig,1500);
-  });
+function copyCurrentSection(){
+  const t=(writeSectionContent[writeCurrentSectionId]||'').trim();
+  if(!t){alert('该章节尚未生成内容');return;}
+  navigator.clipboard.writeText(t).then(()=>alert('已复制到剪贴板'));
 }
 function clearAllSections(){
+  if(writingActive){ alert('正在生成中，请先停止'); return; }
   if(!confirm('确认清空所有章节内容？')) return;
-  WRITE_SECTIONS.forEach(s=>{
-    const ta=document.getElementById(`wsc-${s.id}`); if(ta){ta.value='';autoResizeWs(ta);}
-    const b=document.getElementById(`wsb-${s.id}`); if(b) b.style.display='none';
-    const btn=document.getElementById(`wsbtn-${s.id}`); if(btn){btn.disabled=false;btn.textContent='⚡ 生成';}
-    const p=document.getElementById(`wsp-${s.id}`); if(p) p.style.display='none';
-  });
+  writeSectionContent={};
+  const ta=document.getElementById('writeSectionTextarea');
+  if(ta){ ta.value=''; autoResizeWs(ta); }
+  renderWriteStageToc();
+}
+function startNewPaper(){
+  if(writingActive){ alert('正在生成中，请先停止'); return; }
+  if(!confirm('确认开始写新论文？当前已生成的章节内容将被清空（如需保留请先导出全文）。')) return;
+  writeModules = WRITE_DEFAULT_MODULES.map(m=>({...m, on:true, children:[]}));
+  writeExtRefSelections = {};
+  document.getElementById('writeTopic').value = '';
+  initWriteSections();
 }
 function exportPaper(){
-  const topic=document.getElementById('writeTopic').value.trim()||'学术综述';
+  const topic=document.getElementById('writeTopic').value.trim()||'学术论文';
   let content=`${topic}\n${'═'.repeat(Math.min(topic.length*2,50))}\n\n`;
   let empty=true;
-  WRITE_SECTIONS.forEach(s=>{
-    const val=document.getElementById(`wsc-${s.id}`).value.trim();
+  writeModules.filter(m=>m.on).forEach(s=>{
+    const val=(writeSectionContent[s.id]||'').trim();
     if(val){content+=`${s.label}\n${'-'.repeat(28)}\n${val}\n\n`;empty=false;}
   });
   if(empty){alert('请先生成至少一个章节');return;}
-  content+=`\n—— 由 DocMind 生成 · ${new Date().toLocaleDateString('zh-CN')} ——`;
+  content+=`\n—— 由慧策智写生成 · ${new Date().toLocaleDateString('zh-CN')} ——`;
   const blob=new Blob([content],{type:'text/plain;charset=utf-8'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
   a.download=`${topic.slice(0,30)}_论文.txt`; a.click(); URL.revokeObjectURL(a.href);
@@ -3386,7 +4188,7 @@ function exportReduceResult(){
   const blob = new Blob([t], {type:'text/plain;charset=utf-8'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `DocMind_语言优化结果_${new Date().toLocaleDateString('zh-CN').replace(/\//g,'-')}.txt`;
+  a.download = `慧策智写_语言优化结果_${new Date().toLocaleDateString('zh-CN').replace(/\//g,'-')}.txt`;
   a.click(); URL.revokeObjectURL(a.href);
 }
 
@@ -3584,7 +4386,7 @@ function showResetMsg(el, text, type){
   el.style.border = type==='error' ? '1px solid rgba(248,113,113,.2)' : '1px solid rgba(74,222,128,.2)';
 }
 
-// 加载站点配置（更新咨询弹窗联系方式）
+// 加载站点配置（更新咨询弹窗联系方式 + 备案信息）
 fetch(`${API}/api/site/config`).then(r=>r.json()).then(cfg=>{
   if(!cfg) return;
   const contact = document.querySelector('#lead-modal [style*="也可直接联系"]');
@@ -3593,6 +4395,14 @@ fetch(`${API}/api/site/config`).then(r=>r.json()).then(cfg=>{
     const q = cfg.qq     ? `QQ <b style="color:var(--gold)">${cfg.qq}</b><br>` : '';
     const e = cfg.support_email ? `邮箱 <b style="color:var(--gold)">${cfg.support_email}</b>` : '';
     contact.innerHTML = `也可直接联系：<br>${w}${q}${e}`;
+  }
+  if (cfg.icp) {
+    const icpEl = document.querySelector('#navBeian a[href*="beian.miit.gov.cn"]');
+    if (icpEl) { icpEl.textContent = cfg.icp; if(cfg.icp_url) icpEl.href=cfg.icp_url; }
+  }
+  if (cfg.beian_mps) {
+    const mpsEl = document.querySelector('#navBeian a[href*="beian.mps.gov.cn"]');
+    if (mpsEl) { mpsEl.textContent = cfg.beian_mps; if(cfg.beian_mps_url) mpsEl.href=cfg.beian_mps_url; }
   }
 }).catch(()=>{});
 

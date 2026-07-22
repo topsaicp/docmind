@@ -51,6 +51,9 @@ def _process_in_background(doc_id: str, pdf_path: str, filename: str):
     except Exception as e:
         doc.status    = "error"
         doc.error_msg = str(e)
+        user = session.query(User).filter_by(id=doc.user_id).first()
+        if user and user.pdf_count > 0:
+            user.pdf_count -= 1
         session.commit()
         print(f"❌ {filename} 处理失败：{e}")
     finally:
